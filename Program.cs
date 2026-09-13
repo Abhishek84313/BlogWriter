@@ -38,7 +38,11 @@ var azureCredential = new AzureCliCredential(new AzureCliCredentialOptions
     TenantId = tenantId,
 });
 AIProjectClient projectClient = new(foundryProjectEndpoint, azureCredential);
+
+
 Func<IChatClient, IChatClient> tokenCapFactory = TokenCapChatClient.CreateSharedFactory(maxTotalTokens);
+
+// the console app uses AIProjectClient.AsAIAgent(...) to construct a remote AIAgent (researcherLlm) targeting the hosted agent endpoint
 AIAgent BuildFoundryAgent(string hostedAgentName)
 {
     Uri agentEndpoint = new($"{foundryProjectEndpoint.AbsoluteUri.TrimEnd('/')}/agents/{hostedAgentName}/endpoint/protocols/openai");

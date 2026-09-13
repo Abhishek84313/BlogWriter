@@ -19,13 +19,16 @@ string modelDeployment = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPL
 
 // Entra ID only — no API keys, per repository constraint (this applies to the
 // Foundry model and hosted web-search authentication).
+
+// The agent owns a Foundry-native HostedWebSearchTool(). Web searches, pagination, and document retrievals execute entirely inside the remote hosted process in Azure, not locally on the client machine.
 AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
     .AsAIAgent(
         model: modelDeployment,
         instructions: BlogWriter.Prompts.ResearcherInstructions,
         name: "Researcher",
         tools: [new HostedWebSearchTool()]);
-
+        
+// runs an AgentHost built with Microsoft.Agents.AI.Foundry.Hosting, exposing the Researcher agent as a service over the network.
 var builder = AgentHost.CreateBuilder(args);
 builder.Services.AddFoundryResponses(agent);
 builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());

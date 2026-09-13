@@ -47,6 +47,7 @@ public class ResearcherAgent : IResearcherAgent
         {
             // A single agent run: the model may call hosted web search one or more
             // times, read the results, and return a concise summary as its text.
+            // This issues await _agent.RunAsync(query) using Microsoft Agent Framework to call the remote /responses endpoint over HTTPS using Microsoft Entra ID authentication.
             AgentResponse response = await _agent.RunAsync(query, cancellationToken: cancellationToken);
             string summary = response.Text;
 

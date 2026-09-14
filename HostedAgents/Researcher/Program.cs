@@ -1,6 +1,7 @@
 using Azure.AI.AgentServer.Core;
 using Azure.AI.Projects;
 using Azure.Identity;
+using BlogWriter.PromptLibrary;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Foundry.Hosting;
 using Microsoft.Extensions.AI;
@@ -24,10 +25,10 @@ string modelDeployment = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPL
 AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
     .AsAIAgent(
         model: modelDeployment,
-        instructions: BlogWriter.Prompts.ResearcherInstructions,
+        instructions: PromptCatalog.ResearcherInstructions,
         name: "Researcher",
         tools: [new HostedWebSearchTool()]);
-        
+
 // runs an AgentHost built with Microsoft.Agents.AI.Foundry.Hosting, exposing the Researcher agent as a service over the network.
 var builder = AgentHost.CreateBuilder(args);
 builder.Services.AddFoundryResponses(agent);

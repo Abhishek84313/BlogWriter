@@ -16,4 +16,8 @@
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\BlogWriter.Prompts\BlogWriter.Prompts.csproj" />
+  </ItemGroup>
+
 </Project>

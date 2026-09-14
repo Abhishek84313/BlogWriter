@@ -63,8 +63,6 @@ During execution, `AuthorAgent` converts `ResearchState` into a prompt, calls th
 
 **They are not the same class and are not directly project-referenced. The hosted project is independently deployable; communication happens over the Foundry Responses endpoint.**
 
-One detail to maintain: the Author instructions are duplicated in Prompts.cs and AgentPrompt.cs. The hosted copy is used at deployment/runtime, while the root copy documents or supports the local architecture, so changes should keep both aligned.
-
 ## Authentication
 
 Every hop — console app → hosted agent, and hosted agent → Foundry model/tools — uses

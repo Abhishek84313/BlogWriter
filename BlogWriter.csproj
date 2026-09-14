@@ -11,9 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- BlogWriter.Tests and HostedAgents/* are separate projects nested under this folder; exclude them from this project's default glob. -->
+    <!-- BlogWriter.Tests, HostedAgents/*, and the shared prompt library are separate projects nested under this folder; exclude them from this project's default glob. -->
     <Compile Remove="BlogWriter.Tests\**\*.cs" />
     <Compile Remove="HostedAgents\**\*.cs" />
+    <Compile Remove="BlogWriter.Prompts\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +22,10 @@
          Agent's OpenAI-compatible /responses endpoint over a plain HttpClient. -->
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Agents.AI.Foundry" Version="1.20.0-preview.260831.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="BlogWriter.Prompts\BlogWriter.Prompts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

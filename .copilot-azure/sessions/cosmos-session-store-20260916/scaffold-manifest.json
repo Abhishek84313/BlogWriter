@@ -1,0 +1,7 @@
+{
+  "status": "validated",
+  "template": "infra/main.bicep",
+  "modules": [
+    "infra/modules/cosmos-session-store.bicep"
+  ]
+}

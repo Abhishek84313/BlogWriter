@@ -1,0 +1,28 @@
+{
+  "status": "failed",
+  "deploymentNames": [
+    "BlogWriterCosmosSessionStore-20260916"
+  ],
+  "resourceGroup": "AgentFramework",
+  "location": "eastus",
+  "createdResources": [],
+  "orphanedResourceGroups": [],
+  "unattributedResources": [
+    {
+      "name": "blogwriterav4hxpoatue2o",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "resourceGroup": "AgentFramework",
+      "classification": "orphaned",
+      "note": "Appeared during the deployment window; attribution is unverified and it must be reviewed before cleanup."
+    }
+  ],
+  "error": {
+    "code": "DeploymentFailed",
+    "message": "The Cosmos DB account reached terminal provisioning state Failed."
+  },
+  "outputsConfigured": [],
+  "migration": {
+    "status": "not-applicable",
+    "tier": null
+  }
+}

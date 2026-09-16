@@ -31,6 +31,7 @@ param projectEndpoint string
 param connections connectionType[] = []
 @secure()
 param connectionCredentials object = {}
+param sessionStorePrincipalId string = ''
 
 var projectIdParts = split(projectResourceId, '/')
 var projectSubscriptionId = projectIdParts[2]
@@ -59,6 +60,15 @@ module projectResources 'modules/foundry-project.bicep' = {
   }
 }
 
+module sessionStore 'modules/cosmos-session-store.bicep' = {
+  name: 'cosmos-session-store'
+  scope: resourceGroup(projectSubscriptionId, projectResourceGroupName)
+  params: {
+    accountName: 'blogwriter${uniqueString(projectResourceId)}'
+    principalId: sessionStorePrincipalId
+  }
+}
+
 output AZURE_AI_PROJECT_ID string = projectResourceId
 output AZURE_AI_ACCOUNT_NAME string = accountName
 output AZURE_AI_PROJECT_NAME string = projectName
@@ -71,3 +81,6 @@ output AZURE_AI_PROJECT_ACR_CONNECTION_NAME string = projectResources.outputs.ac
 output AZURE_AI_PROJECT_CONNECTION_NAMES string = projectResources.outputs.connectionNames
 output AZURE_AI_PROJECT_CONNECTIONS_PROJECT_ENDPOINT string = projectEndpoint
 output AZD_FOUNDRY_ACR_MODE string = 'none'
+output COSMOS_ENDPOINT string = sessionStore.outputs.endpoint
+output COSMOS_DATABASE_NAME string = sessionStore.outputs.database
+output COSMOS_CONTAINER_NAME string = sessionStore.outputs.container

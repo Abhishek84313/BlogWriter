@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "checks": {
+    "subscription": true,
+    "requiredUserSecretsPresent": true,
+    "signedInUserPresent": true,
+    "bicepCompilation": true,
+    "armValidation": true
+  }
+}

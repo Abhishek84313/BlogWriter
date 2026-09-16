@@ -17,7 +17,9 @@ keys — every credential is Microsoft Entra ID (`AzureCliCredential` locally,
 | `AUTHOR_AGENT_NAME` | no | `Author` | |
 | `REVIEWER_AGENT_NAME` | no | `Reviewer` | |
 | `MAX_TOTAL_TOKENS` | no | `40000` | Cumulative cross-agent token cap (`TokenCapChatClient`); parse failures fall back to the default |
-| `BLOG_SESSION_STORE_PATH` | no | `%LOCALAPPDATA%\BlogWriter\sessions` | Local directory where completed conversations are stored as JSON files |
+| `COSMOS_ENDPOINT` | yes | — | URI of the Azure Cosmos DB for NoSQL account; authenticates with Microsoft Entra ID |
+| `COSMOS_DATABASE_NAME` | yes | — | Database containing BlogWriter session documents |
+| `COSMOS_CONTAINER_NAME` | yes | — | Owner-partitioned container containing BlogWriter session documents |
 
 Set with, e.g.:
 

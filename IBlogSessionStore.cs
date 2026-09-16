@@ -5,5 +5,7 @@ public interface IBlogSessionStore
 {
     Task<BlogSession> CreateAsync(ResearchState state, CancellationToken cancellationToken = default);
     Task<BlogSession?> GetAsync(string sessionId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<BlogSessionSummary>> ListAsync(CancellationToken cancellationToken = default);
     Task SaveAsync(BlogSession session, CancellationToken cancellationToken = default);
+    Task DeleteOwnerSessionsAsync(string ownerId, CancellationToken cancellationToken = default);
 }

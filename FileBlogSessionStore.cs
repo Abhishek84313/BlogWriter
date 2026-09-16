@@ -3,10 +3,11 @@ using System.Text.Json;
 namespace BlogWriter;
 
 /// <summary>Stores each session as a JSON document on the local machine.</summary>
-public sealed class FileBlogSessionStore(string directoryPath) : IBlogSessionStore
+public sealed class FileBlogSessionStore(string directoryPath, string ownerId = "local") : IBlogSessionStore
 {
     private static readonly JsonSerializerOptions s_jsonOptions = new() { WriteIndented = true };
     private readonly string _directoryPath = directoryPath;
+    private readonly string _ownerId = ownerId;
 
     public async Task<BlogSession> CreateAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
@@ -14,6 +15,7 @@ public sealed class FileBlogSessionStore(string directoryPath) : IBlogSessionSto
         var session = new BlogSession
         {
             Id = Guid.NewGuid().ToString("N"),
+            OwnerId = _ownerId,
             CreatedAt = now,
             UpdatedAt = now,
             State = state,
@@ -37,7 +39,29 @@ public sealed class FileBlogSessionStore(string directoryPath) : IBlogSessionSto
         }
 
         await using FileStream stream = File.OpenRead(path);
-        return await JsonSerializer.DeserializeAsync<BlogSession>(stream, s_jsonOptions, cancellationToken);
+        BlogSession? session = await JsonSerializer.DeserializeAsync<BlogSession>(stream, s_jsonOptions, cancellationToken);
+        return session is not null && (session.OwnerId == _ownerId || (session.OwnerId.Length == 0 && _ownerId == "local")) ? session : null;
+    }
+
+    public async Task<IReadOnlyList<BlogSessionSummary>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        if (!Directory.Exists(_directoryPath))
+        {
+            return [];
+        }
+
+        var sessions = new List<BlogSessionSummary>();
+        foreach (string path in Directory.EnumerateFiles(_directoryPath, "*.json"))
+        {
+            await using FileStream stream = File.OpenRead(path);
+            BlogSession? session = await JsonSerializer.DeserializeAsync<BlogSession>(stream, s_jsonOptions, cancellationToken);
+            if (session is not null && (session.OwnerId == _ownerId || (session.OwnerId.Length == 0 && _ownerId == "local")))
+            {
+                sessions.Add(new BlogSessionSummary(session.Id, session.State.MainTask, session.CreatedAt, session.UpdatedAt));
+            }
+        }
+
+        return sessions.OrderByDescending(session => session.UpdatedAt).Take(20).ToList();
     }
 
     public async Task SaveAsync(BlogSession session, CancellationToken cancellationToken = default)
@@ -59,6 +83,29 @@ public sealed class FileBlogSessionStore(string directoryPath) : IBlogSessionSto
         }
 
         File.Move(temporaryPath, path, overwrite: true);
+    }
+
+    public async Task DeleteOwnerSessionsAsync(string ownerId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        if (!Directory.Exists(_directoryPath))
+        {
+            return;
+        }
+
+        foreach (string path in Directory.EnumerateFiles(_directoryPath, "*.json"))
+        {
+            BlogSession? session;
+            await using (FileStream stream = File.OpenRead(path))
+            {
+                session = await JsonSerializer.DeserializeAsync<BlogSession>(stream, s_jsonOptions, cancellationToken);
+            }
+
+            if (session?.OwnerId == ownerId)
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     private string GetPath(string sessionId) => Path.Combine(_directoryPath, $"{sessionId}.json");

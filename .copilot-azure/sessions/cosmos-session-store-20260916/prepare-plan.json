@@ -1,0 +1,7 @@
+{
+  "status": "approved",
+  "deploymentName": "BlogWriterCosmosSessionStore-20260916",
+  "targetResourceGroup": "AgentFramework",
+  "targetLocation": "eastus",
+  "template": "infra/main.bicep"
+}

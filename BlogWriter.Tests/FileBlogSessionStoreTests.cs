@@ -47,4 +47,33 @@ public class FileBlogSessionStoreTests
         Assert.Null(await store.GetAsync("not-a-session-id"));
         Assert.Null(await store.GetAsync(Guid.NewGuid().ToString("N")));
     }
+
+    [Fact]
+    public async Task ListAsync_ReturnsTheTwentyMostRecentlyUpdatedSessionsFirst()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"BlogWriterTests-{Guid.NewGuid():N}");
+
+        try
+        {
+            var store = new FileBlogSessionStore(directory);
+            for (int index = 0; index < 21; index++)
+            {
+                await store.CreateAsync(new ResearchState { MainTask = $"topic {index}" });
+            }
+
+            IReadOnlyList<BlogSessionSummary> sessions = await store.ListAsync();
+
+            Assert.Equal(20, sessions.Count);
+            Assert.Equal("topic 20", sessions[0].MainTask);
+            Assert.DoesNotContain(sessions, session => session.MainTask == "topic 0");
+            Assert.True(sessions.Zip(sessions.Skip(1), (first, second) => first.UpdatedAt >= second.UpdatedAt).All(result => result));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
 }

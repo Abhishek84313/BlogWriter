@@ -3,6 +3,7 @@ using Azure.AI.Projects;
 using Azure.Identity;
 using BlogWriter;
 using Microsoft.Agents.AI;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,9 @@ string bloggerAgentName = config["BLOGGER_AGENT_NAME"] ?? "Blogger";
 string researcherAgentName = config["RESEARCHER_AGENT_NAME"] ?? "Researcher";
 string authorAgentName = config["AUTHOR_AGENT_NAME"] ?? "Author";
 string reviewerAgentName = config["REVIEWER_AGENT_NAME"] ?? "Reviewer";
+var cosmosEndpoint = new Uri(GetRequired("COSMOS_ENDPOINT"));
+string cosmosDatabaseName = GetRequired("COSMOS_DATABASE_NAME");
+string cosmosContainerName = GetRequired("COSMOS_CONTAINER_NAME");
 
 // Cumulative process-wide budget shared by all four MAF-hosted agent clients.
 long maxTotalTokens = long.TryParse(config["MAX_TOTAL_TOKENS"], out long configuredMaxTotalTokens) ? configuredMaxTotalTokens : 40000;
@@ -83,9 +87,12 @@ ActivitySource.AddActivityListener(new ActivityListener
         Console.WriteLine($"[trace] \u2190 {activity.DisplayName} ({activity.Duration.TotalMilliseconds:F0} ms)")
 });
 
-string sessionDirectory = config["BLOG_SESSION_STORE_PATH"]
-    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BlogWriter", "sessions");
-IBlogSessionStore sessionStore = new FileBlogSessionStore(sessionDirectory);
+using var cosmosClient = new CosmosClient(cosmosEndpoint.ToString(), azureCredential);
+var ownerProvider = new EntraSessionOwnerProvider(azureCredential);
+IBlogSessionStore sessionStore = new CosmosBlogSessionStore(
+    cosmosClient.GetContainer(cosmosDatabaseName, cosmosContainerName),
+    ownerProvider,
+    loggerFactory.CreateLogger<CosmosBlogSessionStore>());
 
 // Prompts for a positive word count, re-asking until a valid value (or blank
 // for the default) is entered. `minimum`, when set, enforces max >= min.
@@ -122,22 +129,35 @@ Console.CancelKeyPress += (_, e) =>
 
 while (!cts.IsCancellationRequested)
 {
-    Console.Write("\nEnter a topic, 'resume <session-id>', or press Enter to exit: ");
+    Console.Write("\nEnter a topic, 'list', 'resume <session-id>', or press Enter to exit: ");
     string? input = Console.ReadLine();
     if (string.IsNullOrWhiteSpace(input))
     {
         break;
     }
 
-    BlogSession? session = null;
-    const string resumePrefix = "resume ";
-    if (input.StartsWith(resumePrefix, StringComparison.OrdinalIgnoreCase))
+    SessionCommand command = SessionCommandParser.Parse(input);
+    if (command is ListSessionsCommand)
     {
-        string sessionId = input[resumePrefix.Length..].Trim();
-        session = await sessionStore.GetAsync(sessionId, cts.Token);
+        try
+        {
+            PrintSessions(await sessionStore.ListAsync(cts.Token));
+        }
+        catch (Exception ex) when (ex is CosmosException or InvalidOperationException)
+        {
+            Console.Error.WriteLine($"Unable to list saved sessions: {ex.Message}");
+        }
+
+        continue;
+    }
+
+    BlogSession? session = null;
+    if (command is ResumeSessionCommand resume)
+    {
+        session = await sessionStore.GetAsync(resume.SessionId, cts.Token);
         if (session is null)
         {
-            Console.Error.WriteLine("Session not found. Check the session ID and configured session store path.");
+            Console.Error.WriteLine("Session not found or unavailable for the signed-in user.");
             continue;
         }
     }
@@ -153,7 +173,7 @@ while (!cts.IsCancellationRequested)
 
         session = await sessionStore.CreateAsync(new ResearchState
         {
-            MainTask = input,
+            MainTask = ((NewTopicCommand)command).Topic,
             MinWords = minWords,
             MaxWords = maxWords
         }, cts.Token);
@@ -174,6 +194,11 @@ while (!cts.IsCancellationRequested)
             Environment.ExitCode = 1;
             return;
         }
+        catch (SessionConflictException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            break;
+        }
         catch (OperationCanceledException)
         {
             Console.Error.WriteLine("Run cancelled. Exiting application.");
@@ -189,8 +214,16 @@ while (!cts.IsCancellationRequested)
             break;
         }
 
-        session!.State.StartFollowUp(followUp);
-        await sessionStore.SaveAsync(session, cts.Token);
+        try
+        {
+            session!.State.StartFollowUp(followUp);
+            await sessionStore.SaveAsync(session, cts.Token);
+        }
+        catch (SessionConflictException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            break;
+        }
     }
 }
 
@@ -216,6 +249,22 @@ void PrintResults(BlogSession session)
     Console.WriteLine($"\n\nRevision Number: {result.RevisionNumber}");
     Console.WriteLine($"\nSession: {session.Id}\n");
     Console.WriteLine("=============================");
+}
+
+void PrintSessions(IReadOnlyList<BlogSessionSummary> sessions)
+{
+    if (sessions.Count == 0)
+    {
+        Console.WriteLine("No saved sessions are available.");
+        return;
+    }
+
+    Console.WriteLine("\n========== SAVED SESSIONS ==========");
+    foreach (BlogSessionSummary session in sessions)
+    {
+        Console.WriteLine($"{session.Id} | Updated {session.UpdatedAt:u} | Created {session.CreatedAt:u}");
+        Console.WriteLine($"  {session.MainTask}");
+    }
 }
 
 

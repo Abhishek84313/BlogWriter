@@ -55,15 +55,25 @@ already-deployed hosted agents by name over the network.
 ```powershell
 dotnet user-secrets set "FOUNDRY_PROJECT_ENDPOINT" "https://<account>.services.ai.azure.com/api/projects/<project>"
 dotnet user-secrets set "AZURE_TENANT_ID" "<tenant-id>"
+dotnet user-secrets set "COSMOS_ENDPOINT" "https://<account>.documents.azure.com:443/"
+dotnet user-secrets set "COSMOS_DATABASE_NAME" "blogwriter"
+dotnet user-secrets set "COSMOS_CONTAINER_NAME" "sessions"
 dotnet run --project .
 ```
 
 It will prompt for a topic and a min/max word count, then stream workflow progress
 (`[trace] → ...` / `[trace] ← ...` lines) before printing the final approved draft.
-After a run, enter a follow-up request to revise the same draft; the console app
-persists the session locally under `%LOCALAPPDATA%\BlogWriter\sessions` by default.
-The result prints the session ID; use `resume <session-id>` at the next topic prompt
-to continue it after restarting the console app.
+The signed-in Azure CLI user requires the Cosmos DB Built-in Data Contributor role
+assigned by `sessionStorePrincipalId`. Enter `list` at the topic prompt to display the
+20 newest sessions for that user, or `resume <session-id>` to continue one after
+restarting the application.
+
+## Session lifecycle
+
+Session records are partitioned by the Microsoft Entra object ID of the signed-in
+user. Account-deletion automation must call `CosmosBlogSessionStore.DeleteOwnerSessionsAsync`
+using an identity with the Cosmos DB data contributor role; this console application
+does not observe Microsoft Entra account deletion events itself.
 
 ## 4. Verifying a deployment
 

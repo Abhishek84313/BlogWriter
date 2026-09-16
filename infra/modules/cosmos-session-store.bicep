@@ -1,20 +1,21 @@
 targetScope = 'resourceGroup'
 
 param accountName string
+param location string
 param databaseName string = 'blogwriter'
 param containerName string = 'sessions'
 param principalId string = ''
 
 resource account 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: accountName
-  location: resourceGroup().location
+  location: location
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
     disableLocalAuth: true
     locations: [
       {
-        locationName: resourceGroup().location
+        locationName: location
         failoverPriority: 0
         isZoneRedundant: false
       }
@@ -72,13 +73,13 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
   }
 }
 
-resource dataContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = if (!empty(principalId)) {
+resource dataContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-04-15' = if (!empty(principalId)) {
   parent: account
   name: guid(account.id, principalId, '00000000-0000-0000-0000-000000000002')
   properties: {
     principalId: principalId
     roleDefinitionId: '${account.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
-    scope: '/'
+    scope: account.id
   }
 }
 

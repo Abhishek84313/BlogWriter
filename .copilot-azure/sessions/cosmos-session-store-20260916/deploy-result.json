@@ -1,24 +1,27 @@
 {
   "status": "failed",
   "deploymentNames": [
-    "BlogWriterCosmosSessionStore-20260916"
+    "BlogWriterCosmosSessionStore-20260916",
+    "BlogWriterCosmosSessionStore-20260916-redeploy",
+    "BlogWriterCosmosSessionStore-20260916-eastus2"
   ],
   "resourceGroup": "AgentFramework",
-  "location": "eastus",
+  "location": "eastus2",
   "createdResources": [],
   "orphanedResourceGroups": [],
   "unattributedResources": [
     {
-      "name": "blogwriterav4hxpoatue2o",
+      "id": "/subscriptions/60632a42-9395-4f2d-a982-a796ae302eb0/resourceGroups/AgentFramework/providers/Microsoft.DocumentDB/databaseAccounts/blogwriterowy7vriqafrdq",
+      "name": "blogwriterowy7vriqafrdq",
       "type": "Microsoft.DocumentDB/databaseAccounts",
       "resourceGroup": "AgentFramework",
       "classification": "orphaned",
-      "note": "Appeared during the deployment window; attribution is unverified and it must be reviewed before cleanup."
+      "note": "Appeared during the deployment window, but ARM later reported no account found. Attribution is unverified and it must be reviewed before cleanup."
     }
   ],
   "error": {
-    "code": "DeploymentFailed",
-    "message": "The Cosmos DB account reached terminal provisioning state Failed."
+    "code": "InvalidResourceLocation",
+    "message": "The resource 'blogwriterowy7vriqafrdq' already exists in location 'eastus' in resource group 'AgentFramework'. A resource with the same name cannot be created in location 'eastus2'. Please select a new resource name."
   },
   "outputsConfigured": [],
   "migration": {

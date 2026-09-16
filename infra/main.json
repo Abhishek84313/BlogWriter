@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.47.16.16243",
-      "templateHash": "2068604930064482155"
+      "templateHash": "3027996530295104941"
     }
   },
   "definitions": {
@@ -93,6 +93,10 @@
     "sessionStorePrincipalId": {
       "type": "string",
       "defaultValue": ""
+    },
+    "cosmosLocation": {
+      "type": "string",
+      "defaultValue": "eastus2"
     }
   },
   "variables": {
@@ -353,7 +357,10 @@
         "mode": "Incremental",
         "parameters": {
           "accountName": {
-            "value": "[format('blogwriter{0}', uniqueString(parameters('projectResourceId')))]"
+            "value": "[format('blogwriter{0}', uniqueString(parameters('projectResourceId'), 'session-store-v3'))]"
+          },
+          "location": {
+            "value": "[parameters('cosmosLocation')]"
           },
           "principalId": {
             "value": "[parameters('sessionStorePrincipalId')]"
@@ -366,11 +373,14 @@
             "_generator": {
               "name": "bicep",
               "version": "0.47.16.16243",
-              "templateHash": "9009390806263285799"
+              "templateHash": "10839242236138871775"
             }
           },
           "parameters": {
             "accountName": {
+              "type": "string"
+            },
+            "location": {
               "type": "string"
             },
             "databaseName": {
@@ -391,26 +401,21 @@
               "type": "Microsoft.DocumentDB/databaseAccounts",
               "apiVersion": "2024-11-15",
               "name": "[parameters('accountName')]",
-              "location": "[resourceGroup().location]",
+              "location": "[parameters('location')]",
               "kind": "GlobalDocumentDB",
               "properties": {
                 "databaseAccountOfferType": "Standard",
                 "disableLocalAuth": true,
                 "locations": [
                   {
-                    "locationName": "[resourceGroup().location]",
+                    "locationName": "[parameters('location')]",
                     "failoverPriority": 0,
                     "isZoneRedundant": false
                   }
                 ],
                 "consistencyPolicy": {
                   "defaultConsistencyLevel": "Session"
-                },
-                "capabilities": [
-                  {
-                    "name": "EnableNoSQL"
-                  }
-                ]
+                }
               }
             },
             {
@@ -469,12 +474,12 @@
             {
               "condition": "[not(empty(parameters('principalId')))]",
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
-              "apiVersion": "2024-11-15",
+              "apiVersion": "2023-04-15",
               "name": "[format('{0}/{1}', parameters('accountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('accountName')), parameters('principalId'), '00000000-0000-0000-0000-000000000002'))]",
               "properties": {
                 "principalId": "[parameters('principalId')]",
                 "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('accountName')))]",
-                "scope": "/"
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('accountName'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('accountName'))]"

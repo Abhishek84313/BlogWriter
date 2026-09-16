@@ -32,6 +32,7 @@ param connections connectionType[] = []
 @secure()
 param connectionCredentials object = {}
 param sessionStorePrincipalId string = ''
+param cosmosLocation string = 'eastus2'
 
 var projectIdParts = split(projectResourceId, '/')
 var projectSubscriptionId = projectIdParts[2]
@@ -64,7 +65,8 @@ module sessionStore 'modules/cosmos-session-store.bicep' = {
   name: 'cosmos-session-store'
   scope: resourceGroup(projectSubscriptionId, projectResourceGroupName)
   params: {
-    accountName: 'blogwriter${uniqueString(projectResourceId)}'
+    accountName: 'blogwriter${uniqueString(projectResourceId, 'session-store-v3')}'
+    location: cosmosLocation
     principalId: sessionStorePrincipalId
   }
 }

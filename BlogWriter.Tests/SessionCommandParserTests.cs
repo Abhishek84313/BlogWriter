@@ -14,11 +14,11 @@ public class SessionCommandParserTests
     }
 
     [Fact]
-    public void Parse_RecognizesResumeCommand()
+    public void Parse_PreservesNumericResumeSelection()
     {
-        var command = Assert.IsType<ResumeSessionCommand>(SessionCommandParser.Parse("resume abc"));
+        var command = Assert.IsType<ResumeSessionCommand>(SessionCommandParser.Parse(" resume 10 "));
 
-        Assert.Equal("abc", command.SessionId);
+        Assert.Equal("10", command.SessionId);
     }
 
     [Fact]

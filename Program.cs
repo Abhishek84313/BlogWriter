@@ -129,7 +129,7 @@ Console.CancelKeyPress += (_, e) =>
 
 while (!cts.IsCancellationRequested)
 {
-    Console.Write("\nEnter a topic, 'list', 'resume <session-id>', or press Enter to exit: ");
+    Console.Write("\nEnter a topic, 'list', 'resume <number>', or press Enter to exit: ");
     string? input = Console.ReadLine();
     if (string.IsNullOrWhiteSpace(input))
     {
@@ -154,7 +154,24 @@ while (!cts.IsCancellationRequested)
     BlogSession? session = null;
     if (command is ResumeSessionCommand resume)
     {
-        session = await sessionStore.GetAsync(resume.SessionId, cts.Token);
+        IReadOnlyList<BlogSessionSummary> summaries;
+        try
+        {
+            summaries = await sessionStore.ListAsync(cts.Token);
+        }
+        catch (Exception ex) when (ex is CosmosException or InvalidOperationException)
+        {
+            Console.Error.WriteLine($"Unable to load saved sessions: {ex.Message}");
+            continue;
+        }
+
+        if (!SessionListSelection.TryResolve(resume.SessionId, summaries, out BlogSessionSummary? selected))
+        {
+            Console.Error.WriteLine("Invalid session selection. Enter a number from the current saved-session list.");
+            continue;
+        }
+
+        session = await sessionStore.GetAsync(selected!.Id, cts.Token);
         if (session is null)
         {
             Console.Error.WriteLine("Session not found or unavailable for the signed-in user.");
@@ -260,10 +277,9 @@ void PrintSessions(IReadOnlyList<BlogSessionSummary> sessions)
     }
 
     Console.WriteLine("\n========== SAVED SESSIONS ==========");
-    foreach (BlogSessionSummary session in sessions)
+    foreach (string line in SessionListSelection.Format(sessions))
     {
-        Console.WriteLine($"{session.Id} | Updated {session.UpdatedAt:u} | Created {session.CreatedAt:u}");
-        Console.WriteLine($"  {session.MainTask}");
+        Console.WriteLine(line);
     }
 }
 

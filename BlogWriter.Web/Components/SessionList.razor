@@ -1,0 +1,17 @@
+<div class="session-list" aria-label="Saved writing sessions">
+    @foreach ((BlogSessionSummary session, int index) in Sessions.Select((session, index) => (session, index)))
+    {
+        <article class="session-entry">
+            <span class="session-number">[@(index + 1)]</span>
+            <div>
+                <strong>@session.MainTask</strong>
+                <time datetime="@session.UpdatedAt.ToString("O")">Updated @session.UpdatedAt.ToString("u")</time>
+            </div>
+        </article>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<BlogSessionSummary> Sessions { get; set; } = [];
+}

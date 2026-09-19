@@ -1,0 +1,161 @@
+@page "/"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@implements IDisposable
+@inject BlogWorkspaceService Workspace
+
+<PageTitle>Blog Writer</PageTitle>
+
+<div class="workspace @(Workspace.State.Mode == WorkspaceMode.Ended ? "workspace-ended" : "")">
+    <header class="workspace-intro">
+        <div>
+            <p class="eyebrow">Editorial workspace</p>
+            <h1>Write. Review. Refine.</h1>
+        </div>
+        <p class="workspace-summary">A focused desk for shaping researched drafts with your reviewer.</p>
+    </header>
+
+    @if (Workspace.State.Mode == WorkspaceMode.Ended)
+    {
+        <section class="ended-state" aria-labelledby="ended-heading">
+            <p class="eyebrow">Session closed</p>
+            <h2 id="ended-heading">Your workspace has ended.</h2>
+            <p>Refresh the page when you are ready to begin another session.</p>
+        </section>
+    }
+    else
+    {
+        <section class="prompt-strip" aria-label="Writing prompts">
+            <PromptInput @ref="_initialPrompt"
+                         Id="initial-prompt"
+                         Label="New writing prompt"
+                         Value="@Workspace.State.InitialPrompt"
+                         ValueChanged="value => Workspace.State.InitialPrompt = value"
+                         Submit="Workspace.SubmitInitialAsync"
+                         Disabled="@Workspace.State.IsProcessing" />
+            <PromptInput Id="revision-prompt"
+                         Label="Revision request"
+                         Value="@Workspace.State.RevisionPrompt"
+                         ValueChanged="value => Workspace.State.RevisionPrompt = value"
+                         Submit="Workspace.SubmitRevisionAsync"
+                         Disabled="@(Workspace.State.IsProcessing || Workspace.State.ActiveSession is null)" />
+        </section>
+
+        <section class="work-grid">
+            @if (Workspace.State.Mode == WorkspaceMode.List)
+            {
+                <DraftPane>
+                    @if (Workspace.State.DisplayedSessions.Count == 0)
+                    {
+                        <p class="empty-copy">No saved sessions are available.</p>
+                    }
+                    else
+                    {
+                        <SessionList Sessions="@Workspace.State.DisplayedSessions" />
+                    }
+                </DraftPane>
+            }
+            else
+            {
+                <DraftPane Content="@Workspace.State.Draft" />
+            }
+            <ReviewPane Content="@Workspace.State.Review" />
+        </section>
+
+        <footer class="workspace-footer">
+            <CommandBar New="() => RequestTransitionAsync(PendingAction.New)"
+                        List="() => RequestTransitionAsync(PendingAction.List)"
+                        Revise="Workspace.LoadSelectionAsync"
+                        Quit="() => RequestTransitionAsync(PendingAction.Quit)"
+                        ReviseEnabled="@Workspace.State.IsReviseEnabled" />
+
+            @if (Workspace.State.IsSelectionVisible)
+            {
+                <div class="session-selector">
+                    <label for="session-number">Session number</label>
+                    <input id="session-number"
+                           inputmode="numeric"
+                           value="@Workspace.State.SelectionInput"
+                           @oninput="args => Workspace.State.SelectionInput = args.Value?.ToString() ?? string.Empty" />
+                </div>
+            }
+        </footer>
+
+        <div class="status-stack" aria-live="polite" aria-atomic="true">
+            @if (!string.IsNullOrWhiteSpace(Workspace.State.StatusMessage))
+            {
+                <p class="status-message">@Workspace.State.StatusMessage</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Workspace.State.ValidationMessage))
+            {
+                <p class="validation-message" role="alert">@Workspace.State.ValidationMessage</p>
+            }
+        </div>
+    }
+</div>
+
+@if (_showDiscardDialog)
+{
+    <ConfirmDiscardDialog Accept="ConfirmTransitionAsync" Decline="DeclineTransition" />
+}
+
+@code {
+    private PromptInput? _initialPrompt;
+    private PendingAction _pendingAction;
+    private bool _showDiscardDialog;
+
+    protected override void OnInitialized() => Workspace.Changed += HandleWorkspaceChanged;
+
+    public void Dispose() => Workspace.Changed -= HandleWorkspaceChanged;
+
+    private async Task RequestTransitionAsync(PendingAction action)
+    {
+        _pendingAction = action;
+        WorkspaceTransitionResult result = await ExecuteTransitionAsync(action, discardConfirmed: false);
+        if (result == WorkspaceTransitionResult.RequiresConfirmation)
+        {
+            _showDiscardDialog = true;
+        }
+        else if (action == PendingAction.New && _initialPrompt is not null)
+        {
+            await _initialPrompt.FocusAsync();
+        }
+    }
+
+    private async Task ConfirmTransitionAsync()
+    {
+        _showDiscardDialog = false;
+        PendingAction action = _pendingAction;
+        _pendingAction = PendingAction.None;
+        await ExecuteTransitionAsync(action, discardConfirmed: true);
+        if (action == PendingAction.New && _initialPrompt is not null)
+        {
+            await _initialPrompt.FocusAsync();
+        }
+    }
+
+    private void DeclineTransition()
+    {
+        _showDiscardDialog = false;
+        _pendingAction = PendingAction.None;
+    }
+
+    private Task<WorkspaceTransitionResult> ExecuteTransitionAsync(PendingAction action, bool discardConfirmed) =>
+        action switch
+        {
+            PendingAction.New => Workspace.NewAsync(discardConfirmed),
+            PendingAction.List => Workspace.ListAsync(discardConfirmed),
+            PendingAction.Quit => Workspace.QuitAsync(discardConfirmed),
+            _ => Task.FromResult(WorkspaceTransitionResult.Completed),
+        };
+
+    private void HandleWorkspaceChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private enum PendingAction
+    {
+        None,
+        New,
+        List,
+        Quit,
+    }
+}

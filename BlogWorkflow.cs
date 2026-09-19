@@ -75,7 +75,8 @@ public class BlogWorkflow(
                         throw capEx;
                     }
 
-                    break;
+                    throw failed.Data as Exception ??
+                        new InvalidOperationException($"Workflow executor '{failed.ExecutorId}' failed.");
 
                 case WorkflowOutputEvent { Data: ResearchState finalState }:
                     // The reviewer yielded the final, approved (or revision-capped) state.

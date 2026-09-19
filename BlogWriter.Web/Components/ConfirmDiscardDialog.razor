@@ -1,0 +1,48 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="dialog-backdrop">
+    <dialog @ref="_dialog" role="dialog" aria-modal="true" aria-labelledby="discard-title" aria-describedby="discard-copy" class="confirm-dialog">
+        <p class="dialog-kicker">Unsaved text</p>
+        <h2 id="discard-title">Discard your changes?</h2>
+        <p id="discard-copy">This action will remove text that has not been submitted.</p>
+        <div class="dialog-actions">
+            <button type="button" data-confirm="keep" @onclick="Decline" autofocus>Keep editing</button>
+            <button type="button" data-confirm="discard" class="danger-command" @onclick="Accept">Discard</button>
+        </div>
+    </dialog>
+</div>
+
+@code {
+    private ElementReference _dialog;
+    private bool _opened;
+
+    [Parameter]
+    public EventCallback Accept { get; set; }
+
+    [Parameter]
+    public EventCallback Decline { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("blogWriterDialog.show", _dialog);
+            _opened = true;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_opened)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("blogWriterDialog.close", _dialog);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

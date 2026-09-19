@@ -1,0 +1,23 @@
+<nav class="command-bar" aria-label="Workspace commands">
+    <button type="button" data-command="new" @onclick="New">New</button>
+    <button type="button" data-command="list" @onclick="List">List</button>
+    <button type="button" data-command="revise" @onclick="Revise" disabled="@(!ReviseEnabled)">Revise</button>
+    <button type="button" data-command="quit" @onclick="Quit">Quit</button>
+</nav>
+
+@code {
+    [Parameter]
+    public EventCallback New { get; set; }
+
+    [Parameter]
+    public EventCallback List { get; set; }
+
+    [Parameter]
+    public EventCallback Revise { get; set; }
+
+    [Parameter]
+    public EventCallback Quit { get; set; }
+
+    [Parameter]
+    public bool ReviseEnabled { get; set; }
+}

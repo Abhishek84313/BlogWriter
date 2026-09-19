@@ -93,6 +93,7 @@ IBlogSessionStore sessionStore = new CosmosBlogSessionStore(
     cosmosClient.GetContainer(cosmosDatabaseName, cosmosContainerName),
     ownerProvider,
     loggerFactory.CreateLogger<CosmosBlogSessionStore>());
+IBlogWriterSessionService sessionService = new BlogWriterSessionService(app, sessionStore);
 
 // Prompts for a positive word count, re-asking until a valid value (or blank
 // for the default) is entered. `minimum`, when set, enforces max >= min.
@@ -141,7 +142,7 @@ while (!cts.IsCancellationRequested)
     {
         try
         {
-            PrintSessions(await sessionStore.ListAsync(cts.Token));
+            PrintSessions(await sessionService.ListAsync(cts.Token));
         }
         catch (Exception ex) when (ex is CosmosException or InvalidOperationException)
         {
@@ -157,7 +158,7 @@ while (!cts.IsCancellationRequested)
         IReadOnlyList<BlogSessionSummary> summaries;
         try
         {
-            summaries = await sessionStore.ListAsync(cts.Token);
+            summaries = await sessionService.ListAsync(cts.Token);
         }
         catch (Exception ex) when (ex is CosmosException or InvalidOperationException)
         {
@@ -171,7 +172,7 @@ while (!cts.IsCancellationRequested)
             continue;
         }
 
-        session = await sessionStore.GetAsync(selected!.Id, cts.Token);
+        session = await sessionService.LoadAsync(selected!.Id, cts.Token);
         if (session is null)
         {
             Console.Error.WriteLine("Session not found or unavailable for the signed-in user.");

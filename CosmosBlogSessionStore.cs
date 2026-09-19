@@ -6,11 +6,11 @@ namespace BlogWriter;
 
 public sealed class CosmosBlogSessionStore(
     Container container,
-    EntraSessionOwnerProvider ownerProvider,
+    ISessionOwnerProvider ownerProvider,
     ILogger<CosmosBlogSessionStore> logger) : IBlogSessionStore
 {
     private readonly Container _container = container;
-    private readonly EntraSessionOwnerProvider _ownerProvider = ownerProvider;
+    private readonly ISessionOwnerProvider _ownerProvider = ownerProvider;
     private readonly ILogger<CosmosBlogSessionStore> _logger = logger;
 
     public async Task<BlogSession> CreateAsync(ResearchState state, CancellationToken cancellationToken = default)

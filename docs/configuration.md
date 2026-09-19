@@ -39,6 +39,49 @@ These are set as `environmentVariables` in each project's `azure.yaml` and provi
 `azd` — see [deployment.md](deployment.md). They're not read from `dotnet user-secrets`
 since hosted agents run in Azure, not locally, once deployed.
 
+## Blazor web app (`BlogWriter.Web/BlogWriter.Web.csproj`)
+
+The web host uses Microsoft Entra OpenID Connect for user sign-in. The signed-in
+user's `oid` claim owns session data; a separate Azure credential authorizes the
+server to call Foundry and Cosmos.
+
+The web host uses the authorization-code flow with PKCE. In the Entra app
+registration, configure `https://localhost:7056/signin-oidc` as a **Web** redirect
+URI. Do not enable the implicit-grant access-token or ID-token checkboxes.
+
+| Key | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `AzureAd:TenantId` | yes | — | Entra tenant for user sign-in |
+| `AzureAd:ClientId` | yes | — | Web app registration client ID |
+| `AzureAd:ClientSecret` | local only | — | Store in user secrets; never commit |
+| `AzureAd:CallbackPath` | no | `/signin-oidc` | Must match the app registration redirect URI |
+| `AzureAd:ClientCredentials:0:SourceType` | production | `KeyVault` | Certificate credential source |
+| `AzureAd:ClientCredentials:0:KeyVaultUrl` | production | — | Key Vault containing the OIDC certificate |
+| `AzureAd:ClientCredentials:0:KeyVaultCertificateName` | production | — | Certificate name registered with the Entra app |
+| `AzureResources:CredentialMode` | yes | `AzureCli` | `AzureCli` locally; `ManagedIdentity` in production |
+| `Foundry:ProjectEndpoint` | yes | — | Existing Foundry project endpoint |
+| `Foundry:*AgentName` | no | role name | Existing hosted-agent names |
+| `Foundry:MaxTotalTokens` | no | `40000` | Shared process token cap |
+| `Cosmos:Endpoint` | yes | — | Cosmos account endpoint |
+| `Cosmos:DatabaseName` | yes | — | Session database |
+| `Cosmos:ContainerName` | yes | — | Owner-partitioned session container |
+
+Local setup:
+
+```powershell
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "AzureAd:TenantId" "<tenant-id>"
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "AzureAd:ClientId" "<app-client-id>"
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "AzureAd:ClientSecret" "<development-secret>"
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "Foundry:ProjectEndpoint" "https://<account>.services.ai.azure.com/api/projects/<project>"
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "Cosmos:Endpoint" "https://<account>.documents.azure.com:443/"
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "Cosmos:DatabaseName" "blogwriter"
+dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "Cosmos:ContainerName" "sessions"
+```
+
+`Authentication:UseTestingIdentity` is accepted only when the host environment is
+`Testing`. It exists for automated browser checks and must never be enabled in a
+development, staging, or production deployment.
+
 ## Keeping prompts in sync
 
 Each hosted agent's `AgentPrompt.cs` must be kept in sync with the corresponding section

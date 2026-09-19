@@ -8,3 +8,12 @@ config.json
 !.env.example
 .claude/
 .azure
+*.user
+*.suo
+packages/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/

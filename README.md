@@ -6,6 +6,22 @@ The system prompts for each agent is contained in Prompts.cs
 
 BlogWorkflow is responsible for creating the nodes and edges for moving through the workflow and also contains the logic for managing a breach of the token-cap (the maximum number of tokens that can be used in a single request, as defined in TokenCapChatClient).
 
+## Blazor web interface
+
+`BlogWriter.Web` provides an authenticated Interactive Server Blazor workspace over
+the same workflow and Cosmos session store. It includes separate draft and reviewer
+panes, prompt and revision inputs, numbered saved-session recall, bounded cancellation,
+and responsive WCAG 2.2 AA-oriented controls.
+
+After configuring Microsoft Entra, Foundry, and Cosmos values from
+[docs/configuration.md](docs/configuration.md), start it with:
+
+```powershell
+dotnet run --project BlogWriter.Web/BlogWriter.Web.csproj
+```
+
+The original console remains available with `dotnet run --project BlogWriter.csproj`.
+
 ## Architecture: Azure AI Foundry Hosted Agents
 
 The 4 agents are deployed as independent **Azure AI Foundry Hosted Agents**
@@ -16,7 +32,7 @@ console app (this project) no longer builds the agents in-process — it only
 calling each hosted agent as a remote `IChatClient`
 using the Microsoft Agent Framework Foundry integration.
 
-```
+```text
 BlogWriter/                (console app — orchestration only, calls hosted agents remotely)
 HostedAgents/
   Blogger/                 (Foundry Hosted Agent — orchestration decisions)
@@ -33,7 +49,7 @@ runtime.
 ### Configuration (console app)
 
 Set via `dotnet user-secrets` (preferred for local dev) or environment
-variables — Entra ID (`DefaultAzureCredential`) is used for all Foundry/model
+variables — Entra ID (`AzureCliCredential`) is used for local Foundry/model
 auth, no API keys:
 
 | Key | Required | Default | Notes |
@@ -47,24 +63,29 @@ auth, no API keys:
 | `MAX_TOTAL_TOKENS` | no | `40000` | Cumulative process-wide cap (`TokenCapChatClient`) |
 
 ## Documentation
+
 * [docs/architecture.md](docs/architecture.md) — full architecture, workflow graph, auth, and token-budget details.
 * [docs/changelog-v1-to-v2.md](docs/changelog-v1-to-v2.md) — what changed from the original in-process design to the current hosted-agent one.
 * [docs/deployment.md](docs/deployment.md) — the `azd` flow for deploying/redeploying each hosted agent and running the console app locally.
 * [docs/configuration.md](docs/configuration.md) — every environment variable/secret used by the console app and the four hosted agents.
 
 ## Miscellaneous Notes
+
 * Web search runs **inside the hosted Researcher agent** through Foundry's hosted web-search tool.
-* Foundry/model access uses Microsoft Entra ID exclusively; the console app authenticates with `DefaultAzureCredential`.
+* Foundry/model access uses Microsoft Entra ID exclusively; the console app authenticates with `AzureCliCredential`.
 * The model deployment is chosen per hosted agent (via `AZURE_AI_MODEL_DEPLOYMENT_NAME` in each `HostedAgents/<Name>` project), not hardcoded in the console app.
 
 ## Additional Features
-* Middleware is used to manage the tools. 
+
+* Middleware is used to manage the tools.
 * OpenTelemetry is used to manage logging and emits a GenAI span per model round-trip
 * ChatOptions sets the temperature to 0 for maximum consistency
 
 ## Known Issues
+
 We are seeing a lot of calls to the LLM. Either there is a problem with the calls or with the telemetry.
 
 ## Next Steps
+
 * The `Microsoft.Agents.AI.Foundry.Hosting` package used by `HostedAgents/*` is still prerelease — re-validate before production use.
 * Decide whether the Researcher's hosted agent should also expose the Responses+Invocations combo, or add more Foundry Toolbox tools (Code Interpreter, Azure AI Search) now that it's hosted.

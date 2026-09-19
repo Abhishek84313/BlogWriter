@@ -4,7 +4,7 @@ using Azure.Core;
 
 namespace BlogWriter;
 
-public sealed class EntraSessionOwnerProvider(TokenCredential credential)
+public sealed class EntraSessionOwnerProvider(TokenCredential credential) : ISessionOwnerProvider
 {
     private static readonly TokenRequestContext s_cosmosScope = new(["https://cosmos.azure.com/.default"]);
     private readonly TokenCredential _credential = credential;

@@ -32,6 +32,47 @@ public sealed class BlogWorkspaceServiceTests
     }
 
     [Fact]
+    public async Task LaunchSelectionAsync_RestoresPromptContextAndStartsExactlyOnce()
+    {
+        var sessions = new StubSessionService
+        {
+            Summaries = [CreateSummary("saved")],
+            SessionToLoad = ListLauncherTestHelpers.Session("saved topic", "tighten the ending"),
+        };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.Draft = "old draft";
+        workspace.State.Review = "old review";
+        workspace.State.InitialPrompt = "old prompt";
+        workspace.State.RevisionPrompt = "old revision";
+
+        await workspace.ListAsync(true);
+        await workspace.LaunchSelectionAsync("1");
+
+        Assert.Equal(1, sessions.StartCalls);
+        Assert.Equal("saved topic", sessions.LastStartPrompt);
+        Assert.Equal("tighten the ending", workspace.State.RevisionPrompt);
+        Assert.Equal(WorkspaceMode.Draft, workspace.State.Mode);
+        Assert.Empty(workspace.State.SelectionError ?? "");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("0")]
+    [InlineData("9")]
+    public async Task LaunchSelectionAsync_InvalidInputDoesNotLoadOrStart(string input)
+    {
+        var sessions = new StubSessionService { Summaries = [CreateSummary("saved")] };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        await workspace.ListAsync(false);
+
+        await workspace.LaunchSelectionAsync(input);
+
+        Assert.Equal(0, sessions.LoadCalls);
+        Assert.Equal(0, sessions.StartCalls);
+        Assert.NotNull(workspace.State.SelectionError);
+    }
+
+    [Fact]
     public async Task SubmitInitialAsync_AppendsLifecycleAndReviewerOutput()
     {
         var sessions = new StubSessionService();
@@ -101,7 +142,7 @@ public sealed class BlogWorkspaceServiceTests
         await workspace.SubmitInitialAsync();
         sessions.LastOutput!.Report(BlogWorkspaceOutputTestHelpers.Review("review", "initial-review"));
 
-        Assert.Equal(1, workspace.State.Review.Split("\n\n", StringSplitOptions.None).Length);
+        Assert.Single(workspace.State.Review.Split("\n\n", StringSplitOptions.None));
     }
 
     [Fact]
@@ -398,6 +439,7 @@ public sealed class BlogWorkspaceServiceTests
     private sealed class StubSessionService : IBlogWriterSessionService
     {
         public int StartCalls { get; private set; }
+        public string? LastStartPrompt { get; private set; }
         public int LoadCalls { get; private set; }
         public WordRange? LastStartRange { get; private set; }
         public WordRange? LastRevisionRange { get; private set; }
@@ -410,6 +452,7 @@ public sealed class BlogWorkspaceServiceTests
         public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default, IProgress<WorkflowOutputUpdate>? output = null)
         {
             StartCalls++;
+            LastStartPrompt = prompt;
             LastOutput = output;
             output?.Report(WorkflowOutputUpdate.Create(
                 WorkflowOutputKind.ReviewerFeedback,

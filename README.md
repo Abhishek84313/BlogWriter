@@ -17,7 +17,9 @@ they default to 1000 and 2000 words. Workflow progress, validation, cancellation
 failure messages appear as an ordered log beneath the New/List/Revise/Quit buttons.
 Reviewer feedback is kept in Reviewer notes as it arrives and accumulates across
 revisions for the active session; it is cleared when starting New or loading another
-session.
+session. In List mode, enter the one-based session number beside List to restore the
+saved MainTask and optional CurrentSubTask and launch it immediately. The `?` command
+shows and copies the HTTPS launch command.
 
 After configuring Microsoft Entra, Foundry, and Cosmos values from
 [docs/configuration.md](docs/configuration.md), start it with:

@@ -1,0 +1,69 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="dialog-backdrop">
+    <dialog @ref="_dialog" role="dialog" aria-modal="true" aria-labelledby="run-command-title" aria-describedby="run-command-copy" class="confirm-dialog run-command-dialog">
+        <p class="dialog-kicker">Developer help</p>
+        <h2 id="run-command-title">Run Blog Writer</h2>
+        <p id="run-command-copy">Use this command in the repository terminal:</p>
+        <code class="run-command-text">@CommandText</code>
+        @if (!string.IsNullOrWhiteSpace(CopyMessage))
+        {
+            <p class="copy-message" role="status">@CopyMessage</p>
+        }
+        <div class="dialog-actions">
+            <button type="button" @onclick="CopyAsync">Copy</button>
+            <button type="button" data-command="close-help" @onclick="Close">Close</button>
+        </div>
+    </dialog>
+</div>
+
+@code {
+    public const string CommandText = "dotnet run --project BlogWriter.Web/BlogWriter.Web.csproj --launch-profile https";
+
+    private ElementReference _dialog;
+    private bool _opened;
+
+    [Parameter]
+    public EventCallback Closed { get; set; }
+
+    private string? CopyMessage { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("blogWriterDialog.show", _dialog);
+            _opened = true;
+        }
+    }
+
+    private async Task CopyAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", CommandText);
+            CopyMessage = "Command copied.";
+        }
+        catch (JSException)
+        {
+            CopyMessage = "Copying was not available. Select the command above to copy it manually.";
+        }
+    }
+
+    private async Task Close() => await Closed.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_opened)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("blogWriterDialog.close", _dialog);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

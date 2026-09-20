@@ -18,29 +18,25 @@ public sealed class WorkflowLogTests : BunitContext
     }
 
     [Fact]
-    public void WorkflowLog_RendersOrderedTextEntries()
+    public void WorkflowLog_RendersLatestStatusAsSafeText()
     {
         IRenderedComponent<WorkflowLog> cut = Render<WorkflowLog>(parameters => parameters
-            .Add(component => component.Entries, [
-                new WorkflowLogEntry("started", WorkflowOutputOutcome.Progress),
-                new WorkflowLogEntry("<failed>", WorkflowOutputOutcome.Failure),
-            ]));
+            .Add(component => component.CurrentStatus, "<failed>")
+            .Add(component => component.CurrentStatusOutcome, WorkflowOutputOutcome.Failure));
 
-        Assert.Equal(["Progress: started", "Failure: <failed>"], cut.FindAll("li").Select(item => item.TextContent).ToArray());
+        Assert.Contains("<failed>", cut.Find(".workflow-status").TextContent);
+        Assert.Empty(cut.FindAll("li"));
         Assert.Contains("&lt;failed&gt;", cut.Markup);
     }
 
     [Fact]
-    public void WorkflowLog_RetainsOlderEntriesForScrolling()
+    public void WorkflowLog_ReplacesPriorStatusWithNewestValue()
     {
-        IReadOnlyList<WorkflowLogEntry> entries = Enumerable.Range(1, 5)
-            .Select(index => new WorkflowLogEntry($"entry {index}", WorkflowOutputOutcome.Progress))
-            .ToList();
-
         IRenderedComponent<WorkflowLog> cut = Render<WorkflowLog>(parameters => parameters
-            .Add(component => component.Entries, entries));
+            .Add(component => component.CurrentStatus, "latest"));
 
-        Assert.Equal(5, cut.FindAll("li").Count);
+        Assert.Equal("latest", cut.Find(".workflow-status").TextContent);
+        Assert.Empty(cut.FindAll("li"));
         Assert.Contains("workflow-log", cut.Find("section").ClassList);
     }
 }

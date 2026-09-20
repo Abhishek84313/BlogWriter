@@ -104,6 +104,9 @@ In List mode, the inline three-digit selector uses the displayed one-based posit
 Valid selection restores `MainTask`, restores non-empty `CurrentSubTask` as the Revision
 request, and starts one initial writing operation. The `?` command displays and copies
 the HTTPS launch command. Revision request is disabled whenever Revise is disabled.
+After New, Revision request is editable but Revise remains disabled until a draft or
+session exists. Workflow status is presented as one latest-message line while Reviewer
+notes remain independently visible.
 
 ## Keeping prompts in sync
 

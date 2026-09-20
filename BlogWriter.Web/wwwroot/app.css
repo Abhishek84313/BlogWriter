@@ -136,15 +136,15 @@ button, a { touch-action: manipulation; }
 .session-entry time { margin-top: 5px; color: var(--muted); font-size: .7rem; }
 
 .workspace-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px 16px; }
-.command-bar { display: grid; grid-template-columns: 82px minmax(0, 1fr) 82px 82px 36px; gap: 8px; }
+.command-bar { display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px 72px 32px; gap: 6px; }
 .list-command { min-width: 0; display: flex; align-items: stretch; gap: 6px; }
-.list-command button { flex: 0 0 82px; }
+.list-command button { flex: 0 0 72px; }
 .list-command input { width: 3.5rem; min-width: 3.5rem; border: 1px solid var(--ink); padding: 6px 5px; background: var(--surface); color: var(--ink); text-align: center; }
 .help-command { padding-inline: 0 !important; }
 .command-bar button, .dialog-actions button, .command-button {
-    min-height: 36px;
+    min-height: 32px;
     border: 1px solid var(--ink);
-    padding: 7px 10px;
+    padding: 5px 8px;
     background: var(--surface);
     color: var(--ink);
     cursor: pointer;
@@ -157,9 +157,8 @@ button, a { touch-action: manipulation; }
 
 .session-selector { width: 150px; grid-column: 2; grid-row: 1 / span 2; display: grid; align-self: end; gap: 5px; }
 .session-selector input { width: 100%; min-height: 36px; border: 1px solid var(--ink); padding: 6px 9px; background: white; }
-.workflow-log { grid-column: 1; min-width: 0; max-height: 4.8rem; overflow: auto; border-top: 1px solid var(--line); padding: 8px 0 0; }
-.workflow-log-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.workflow-log-entry { margin: 0; font-size: .78rem; line-height: 1.35; overflow-wrap: anywhere; }
+.workflow-log { grid-column: 1; min-width: 0; overflow: hidden; border-top: 1px solid var(--line); padding: 6px 0 0; }
+.workflow-status { margin: 0; font-size: .78rem; line-height: 1.35; overflow-wrap: anywhere; }
 .workflow-log-progress { color: var(--muted); }
 .workflow-log-success { color: var(--forest-dark); }
 .workflow-log-cancellation, .workflow-log-validation, .workflow-log-conflict, .workflow-log-failure { color: #9d2c20; }

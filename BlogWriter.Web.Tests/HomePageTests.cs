@@ -54,8 +54,8 @@ public sealed class HomePageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(cut.Find("#command-session-number"));
-            Assert.False(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
-            Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+            Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+            Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
             Assert.Contains("[1]", cut.Find(".session-list").TextContent);
         });
     }
@@ -89,7 +89,7 @@ public sealed class HomePageTests : BunitContext
         Assert.False(cut.Find("button[data-command='list']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[data-command='quit']").HasAttribute("disabled"));
         Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
-        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
     }
 
     [Fact]

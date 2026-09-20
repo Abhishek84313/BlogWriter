@@ -424,6 +424,8 @@ public sealed class BlogWorkspaceService : IDisposable
         State.IsProcessing = false;
         State.StatusMessage = null;
         State.ValidationMessage = null;
+        State.CurrentStatus = null;
+        State.CurrentStatusOutcome = null;
         NotifyChanged();
     }
 

@@ -38,7 +38,7 @@
                          Value="@Workspace.State.RevisionPrompt"
                          ValueChanged="value => Workspace.State.RevisionPrompt = value"
                          Submit="Workspace.SubmitRevisionAsync"
-                         Disabled="@(!Workspace.State.IsReviseEnabled)" />
+                         Disabled="@(!Workspace.State.IsRevisionInputEnabled)" />
         </section>
 
         <WordRangeInput MinValue="@Workspace.State.MinWordsInput"
@@ -81,7 +81,8 @@
                         Help="ShowHelp"
                         ReviseEnabled="@Workspace.State.IsReviseEnabled" />
 
-            <WorkflowLog Entries="@Workspace.State.WorkflowLog" />
+            <WorkflowLog CurrentStatus="@Workspace.State.CurrentStatus"
+                         CurrentStatusOutcome="@Workspace.State.CurrentStatusOutcome" />
 
         </footer>
 

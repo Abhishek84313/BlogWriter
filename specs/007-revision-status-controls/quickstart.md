@@ -19,6 +19,12 @@ Expected outcome: New enables Revision request but not Revise, drafts enable bot
 processing disables submissions, the latest status replaces earlier messages, Reviewer
 notes remain separate, and command controls retain compact responsive layout.
 
+Focused checkpoint: feature 007 web tests pass with the clarified New/draft/processing
+availability matrix and latest-status presentation.
+
+Final automated checkpoint: 88 core tests and 64 web tests pass; both projects build
+cleanly.
+
 ## Manual workspace validation
 
 1. Start the web application with `dotnet run --project BlogWriter.Web/BlogWriter.Web.csproj --launch-profile https` and sign in.

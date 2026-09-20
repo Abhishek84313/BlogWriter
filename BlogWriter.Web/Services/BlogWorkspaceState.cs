@@ -36,6 +36,8 @@ public sealed class BlogWorkspaceState
     public string? StatusMessage { get; internal set; }
     public string? ValidationMessage { get; internal set; }
     public IReadOnlyList<WorkflowLogEntry> WorkflowLog { get; internal set; } = [];
+    public string? CurrentStatus { get; internal set; }
+    public WorkflowOutputOutcome? CurrentStatusOutcome { get; internal set; }
 
     internal HashSet<string> ReviewerUpdateKeys { get; } = new(StringComparer.Ordinal);
 
@@ -47,6 +49,8 @@ public sealed class BlogWorkspaceState
         }
 
         WorkflowLog = [.. WorkflowLog, new WorkflowLogEntry(message, outcome)];
+        CurrentStatus = message;
+        CurrentStatusOutcome = outcome;
     }
 
     internal void ClearOutput()
@@ -74,7 +78,9 @@ public sealed class BlogWorkspaceState
     }
 
     public bool IsSelectionVisible => Mode == WorkspaceMode.List;
-    public bool IsReviseEnabled => IsSelectionVisible && !IsProcessing;
+    public bool HasDraft => !string.IsNullOrWhiteSpace(Draft);
+    public bool IsRevisionInputEnabled => !IsProcessing && (Mode == WorkspaceMode.New || HasDraft || ActiveSession is not null);
+    public bool IsReviseEnabled => !IsProcessing && (HasDraft || ActiveSession is not null);
     public bool HasUnsavedRange
     {
         get

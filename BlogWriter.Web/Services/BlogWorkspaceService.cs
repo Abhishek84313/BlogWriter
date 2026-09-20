@@ -34,7 +34,12 @@ public sealed class BlogWorkspaceService : IDisposable
         return RunSessionOperationAsync(
             prompt,
             range,
-            cancellationToken => _sessions.StartAsync(prompt, range.Min, range.Max, cancellationToken),
+            (cancellationToken, output) => _sessions.StartAsync(
+                prompt,
+                range.Min,
+                range.Max,
+                cancellationToken,
+                output),
             clearInput: () => State.InitialPrompt = "");
     }
 
@@ -56,12 +61,13 @@ public sealed class BlogWorkspaceService : IDisposable
         return RunSessionOperationAsync(
             revision,
             range,
-            cancellationToken => _sessions.ReviseAsync(
+            (cancellationToken, output) => _sessions.ReviseAsync(
                 activeSession,
                 revision,
                 range.Min,
                 range.Max,
-                cancellationToken),
+                cancellationToken,
+                output),
             clearInput: () => State.RevisionPrompt = "");
     }
 
@@ -103,6 +109,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.SelectionInput = "";
         State.ValidationMessage = null;
         State.StatusMessage = "Loading saved sessions...";
+        State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
         NotifyChanged();
 
         try
@@ -112,6 +119,7 @@ public sealed class BlogWorkspaceService : IDisposable
             State.StatusMessage = State.DisplayedSessions.Count == 0
                 ? "No saved sessions are available."
                 : $"{State.DisplayedSessions.Count} saved sessions loaded.";
+            State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Success);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -161,6 +169,7 @@ public sealed class BlogWorkspaceService : IDisposable
         await CancelActiveOperationAsync();
         ClearWorkspace(WorkspaceMode.Ended);
         State.StatusMessage = "This Blog Writer session has ended.";
+        State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Success);
         NotifyChanged();
         return WorkspaceTransitionResult.Completed;
     }
@@ -182,7 +191,7 @@ public sealed class BlogWorkspaceService : IDisposable
     private async Task RunSessionOperationAsync(
         string input,
         WordRange submittedRange,
-        Func<CancellationToken, Task<BlogSession>> operation,
+        Func<CancellationToken, IProgress<WorkflowOutputUpdate>, Task<BlogSession>> operation,
         Action clearInput)
     {
         if (State.Mode == WorkspaceMode.Ended)
@@ -209,9 +218,11 @@ public sealed class BlogWorkspaceService : IDisposable
         State.IsProcessing = true;
         State.ValidationMessage = null;
         State.StatusMessage = "Writing in progress...";
+        State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
         NotifyChanged();
 
-        Task<BlogSession> task = operation(cancellation.Token);
+        var output = new Progress<WorkflowOutputUpdate>(update => HandleOutput(version, update));
+        Task<BlogSession> task = operation(cancellation.Token, output);
         _activeOperation = task;
         try
         {
@@ -224,12 +235,14 @@ public sealed class BlogWorkspaceService : IDisposable
             clearInput();
             Publish(session, submittedRange);
             State.StatusMessage = "Writing complete.";
+            State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Success);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
             if (version == _operationVersion)
             {
                 State.StatusMessage = "Writing cancelled.";
+                State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Cancellation);
             }
         }
         catch (Exception exception)
@@ -239,6 +252,11 @@ public sealed class BlogWorkspaceService : IDisposable
                 State.ValidationMessage = exception is SessionConflictException
                     ? "This session changed elsewhere. Refresh the list before retrying."
                     : "The writing operation failed. Your previous draft is unchanged.";
+                State.AppendLog(
+                    State.ValidationMessage,
+                    exception is SessionConflictException
+                        ? WorkflowOutputOutcome.Conflict
+                        : WorkflowOutputOutcome.Failure);
                 State.StatusMessage = null;
             }
         }
@@ -319,7 +337,21 @@ public sealed class BlogWorkspaceService : IDisposable
 
         State.ActiveSession = session;
         State.Draft = session.State.Draft;
-        State.Review = session.State.ReviewNotes;
+        if (submittedRange is null)
+        {
+            State.Review = session.State.ReviewNotes;
+            State.ReviewerUpdateKeys.Clear();
+            if (!string.IsNullOrWhiteSpace(State.Review))
+            {
+                State.ReviewerUpdateKeys.Add($"loaded-{session.Id}");
+            }
+            State.ClearOutput();
+        }
+        else if (!string.IsNullOrWhiteSpace(session.State.ReviewNotes) &&
+                 !State.Review.Contains(session.State.ReviewNotes, StringComparison.Ordinal))
+        {
+            State.AppendReviewerFeedback(session.State.ReviewNotes, $"final-{session.Id}-{_operationVersion}");
+        }
         State.DisplayedSessions = [];
         State.SelectionInput = "";
         State.Mode = WorkspaceMode.Draft;
@@ -335,6 +367,7 @@ public sealed class BlogWorkspaceService : IDisposable
         SetAcceptedAndVisibleRange(WordRange.Default);
         State.Draft = "";
         State.Review = "";
+        State.ClearOutput();
         State.ActiveSession = null;
         State.DisplayedSessions = [];
         State.SelectionInput = "";
@@ -347,6 +380,26 @@ public sealed class BlogWorkspaceService : IDisposable
     private void SetValidation(string message)
     {
         State.ValidationMessage = message;
+        State.AppendLog(message, WorkflowOutputOutcome.Validation);
+        NotifyChanged();
+    }
+
+    private void HandleOutput(long version, WorkflowOutputUpdate update)
+    {
+        if (version != _operationVersion || State.Mode == WorkspaceMode.Ended)
+        {
+            return;
+        }
+
+        if (update.Kind == WorkflowOutputKind.ReviewerFeedback)
+        {
+            State.AppendReviewerFeedback(update.Message, update.UpdateKey);
+        }
+        else
+        {
+            State.AppendLog(update.Message, update.Outcome);
+        }
+
         NotifyChanged();
     }
 
@@ -357,6 +410,7 @@ public sealed class BlogWorkspaceService : IDisposable
         {
             range = default;
             State.ValidationMessage = "Correct Min and Max before submitting.";
+            State.AppendLog(State.ValidationMessage, WorkflowOutputOutcome.Validation);
             NotifyChanged();
             return false;
         }

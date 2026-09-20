@@ -13,7 +13,11 @@ the same workflow and Cosmos session store. It includes separate draft and revie
 panes, prompt and revision inputs, numbered saved-session recall, bounded cancellation,
 and responsive WCAG 2.2 AA-oriented controls. The compact `Min` and `Max` fields between
 the prompts and content panes set the target word range for new drafts and revisions;
-they default to 1000 and 2000 words.
+they default to 1000 and 2000 words. Workflow progress, validation, cancellation, and
+failure messages appear as an ordered log beneath the New/List/Revise/Quit buttons.
+Reviewer feedback is kept in Reviewer notes as it arrives and accumulates across
+revisions for the active session; it is cleared when starting New or loading another
+session.
 
 After configuring Microsoft Entra, Foundry, and Cosmos values from
 [docs/configuration.md](docs/configuration.md), start it with:

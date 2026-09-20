@@ -1,0 +1,23 @@
+<section class="workflow-log" aria-label="Workflow log" aria-live="polite" aria-atomic="false" tabindex="0">
+    <h2 class="visually-hidden">Workflow log</h2>
+    @if (Entries.Count == 0)
+    {
+        <p class="empty-copy">No workflow activity yet.</p>
+    }
+    else
+    {
+        <ol class="workflow-log-list">
+            @foreach (WorkflowLogEntry entry in Entries)
+            {
+                <li class="workflow-log-entry workflow-log-@entry.Outcome.ToString().ToLowerInvariant()">
+                    <span class="visually-hidden">@entry.Outcome: </span>@entry.Message
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<WorkflowLogEntry> Entries { get; set; } = [];
+}

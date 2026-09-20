@@ -11,7 +11,8 @@ public sealed class BlogWriterSessionService(
         string prompt,
         int minWords = ResearchState.DefaultMinWords,
         int maxWords = ResearchState.DefaultMaxWords,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<WorkflowOutputUpdate>? output = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
         WordRange range = WordRange.Create(minWords, maxWords);
@@ -23,7 +24,7 @@ public sealed class BlogWriterSessionService(
             MaxWords = range.Max,
         }, cancellationToken);
 
-        session.State = await _workflow.RunAsync(session.State, cancellationToken);
+        session.State = await _workflow.RunAsync(session.State, cancellationToken, output);
         await _sessionStore.SaveAsync(session, cancellationToken);
         return session;
     }
@@ -33,7 +34,8 @@ public sealed class BlogWriterSessionService(
         string revision,
         int minWords,
         int maxWords,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<WorkflowOutputUpdate>? output = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
@@ -52,7 +54,7 @@ public sealed class BlogWriterSessionService(
         candidate.State.MinWords = range.Min;
         candidate.State.MaxWords = range.Max;
         candidate.State.StartFollowUp(revision);
-        candidate.State = await _workflow.RunAsync(candidate.State, cancellationToken);
+        candidate.State = await _workflow.RunAsync(candidate.State, cancellationToken, output);
         await _sessionStore.SaveAsync(candidate, cancellationToken);
         return candidate;
     }

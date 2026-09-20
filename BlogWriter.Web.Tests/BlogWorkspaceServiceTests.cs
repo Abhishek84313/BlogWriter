@@ -32,6 +32,99 @@ public sealed class BlogWorkspaceServiceTests
     }
 
     [Fact]
+    public async Task SubmitInitialAsync_AppendsLifecycleAndReviewerOutput()
+    {
+        var sessions = new StubSessionService();
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+
+        await workspace.SubmitInitialAsync();
+
+        Assert.Contains(workspace.State.WorkflowLog, entry => entry.Message == "Writing in progress...");
+        Assert.Contains("review", workspace.State.Review);
+        Assert.DoesNotContain("review", workspace.State.WorkflowLog.Select(entry => entry.Message));
+    }
+
+    [Fact]
+    public async Task ReviewerOutput_AccumulatesAcrossRevisionsAndResetsForNewSession()
+    {
+        var sessions = new StubSessionService();
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+        await workspace.SubmitInitialAsync();
+        workspace.State.RevisionPrompt = "revise";
+
+        await workspace.SubmitRevisionAsync();
+
+        Assert.Contains("review", workspace.State.Review);
+        Assert.Contains("revision review", workspace.State.Review);
+        Assert.Equal(2, workspace.State.Review.Split("\n\n", StringSplitOptions.None).Length);
+
+        await workspace.NewAsync(discardConfirmed: true);
+
+        Assert.Empty(workspace.State.Review);
+        Assert.Empty(workspace.State.WorkflowLog);
+    }
+
+    [Fact]
+    public async Task LateOutputFromSupersededOperationDoesNotChangeWorkspace()
+    {
+        var sessions = new StubSessionService { PendingStart = new TaskCompletionSource<BlogSession>() };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+        Task submission = workspace.SubmitInitialAsync();
+        await sessions.Started.Task;
+        IProgress<WorkflowOutputUpdate> output = sessions.LastOutput!;
+
+        await workspace.NewAsync(discardConfirmed: true);
+        output.Report(WorkflowOutputUpdate.Create(
+            WorkflowOutputKind.ReviewerFeedback,
+            WorkflowOutputOutcome.Review,
+            "late review",
+            operationVersion: 1,
+            sequence: 99,
+            updateKey: "late"));
+        sessions.PendingStart.SetResult(CreateSession("late"));
+        await submission;
+
+        Assert.Empty(workspace.State.Review);
+        Assert.DoesNotContain(workspace.State.WorkflowLog, entry => entry.Message == "late review");
+    }
+
+    [Fact]
+    public async Task DuplicateReviewerOutputIsRenderedOnce()
+    {
+        var sessions = new StubSessionService();
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+
+        await workspace.SubmitInitialAsync();
+        sessions.LastOutput!.Report(BlogWorkspaceOutputTestHelpers.Review("review", "initial-review"));
+
+        Assert.Equal(1, workspace.State.Review.Split("\n\n", StringSplitOptions.None).Length);
+    }
+
+    [Fact]
+    public async Task LoadingSessionSeedsReviewerNotesAndClearsTransientLog()
+    {
+        var sessions = new StubSessionService
+        {
+            Summaries = [CreateSummary("saved")],
+            SessionToLoad = CreateSession("saved draft", "stored review"),
+        };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+        await workspace.SubmitInitialAsync();
+        await workspace.ListAsync(discardConfirmed: true);
+        workspace.State.SelectionInput = "1";
+
+        await workspace.LoadSelectionAsync();
+
+        Assert.Equal("stored review", workspace.State.Review);
+        Assert.Empty(workspace.State.WorkflowLog);
+    }
+
+    [Fact]
     public async Task SubmitInitialAsync_UsesVisibleWordRangeAndAcceptsIt()
     {
         var sessions = new StubSessionService();
@@ -215,7 +308,8 @@ public sealed class BlogWorkspaceServiceTests
         await workspace.SubmitRevisionAsync();
 
         Assert.Equal("revised: make it shorter", workspace.State.Draft);
-        Assert.Equal("revision review", workspace.State.Review);
+        Assert.Contains("review", workspace.State.Review);
+        Assert.Contains("revision review", workspace.State.Review);
         Assert.Empty(workspace.State.RevisionPrompt);
     }
 
@@ -278,10 +372,14 @@ public sealed class BlogWorkspaceServiceTests
     private static BlogSessionSummary CreateSummary(string task) =>
         new(Guid.NewGuid().ToString("N"), task, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
 
+    private static BlogSession CreateSession(string draft, string review) =>
+        CreateSession(draft, ResearchState.DefaultMinWords, ResearchState.DefaultMaxWords, review);
+
     private static BlogSession CreateSession(
         string draft,
         int minWords = ResearchState.DefaultMinWords,
-        int maxWords = ResearchState.DefaultMaxWords) => new()
+        int maxWords = ResearchState.DefaultMaxWords,
+        string review = "review") => new()
         {
             Id = Guid.NewGuid().ToString("N"),
             OwnerId = "owner",
@@ -293,7 +391,7 @@ public sealed class BlogWorkspaceServiceTests
                 MinWords = minWords,
                 MaxWords = maxWords,
                 Draft = draft,
-                ReviewNotes = "review",
+                ReviewNotes = review,
             },
         };
 
@@ -307,10 +405,19 @@ public sealed class BlogWorkspaceServiceTests
         public BlogSession? SessionToLoad { get; init; }
         public TaskCompletionSource<BlogSession>? PendingStart { get; init; }
         public TaskCompletionSource Started { get; } = new();
+        public IProgress<WorkflowOutputUpdate>? LastOutput { get; private set; }
 
-        public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default)
+        public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default, IProgress<WorkflowOutputUpdate>? output = null)
         {
             StartCalls++;
+            LastOutput = output;
+            output?.Report(WorkflowOutputUpdate.Create(
+                WorkflowOutputKind.ReviewerFeedback,
+                WorkflowOutputOutcome.Review,
+                "review",
+                operationVersion: 1,
+                sequence: 1,
+                updateKey: "initial-review"));
             LastStartRange = new WordRange(minWords, maxWords);
             Started.TrySetResult();
             return PendingStart?.Task ?? Task.FromResult(CreateSession($"draft: {prompt}", minWords, maxWords));
@@ -321,8 +428,17 @@ public sealed class BlogWorkspaceServiceTests
             string revision,
             int minWords,
             int maxWords,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IProgress<WorkflowOutputUpdate>? output = null)
         {
+            LastOutput = output;
+            output?.Report(WorkflowOutputUpdate.Create(
+                WorkflowOutputKind.ReviewerFeedback,
+                WorkflowOutputOutcome.Review,
+                "revision review",
+                operationVersion: 2,
+                sequence: 1,
+                updateKey: "revision-review"));
             LastRevisionRange = new WordRange(minWords, maxWords);
             return Task.FromResult(new BlogSession
             {

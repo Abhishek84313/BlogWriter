@@ -282,20 +282,20 @@ public sealed class BlogWorkspaceServiceTests
         string draft,
         int minWords = ResearchState.DefaultMinWords,
         int maxWords = ResearchState.DefaultMaxWords) => new()
-    {
-        Id = Guid.NewGuid().ToString("N"),
-        OwnerId = "owner",
-        CreatedAt = DateTimeOffset.UtcNow,
-        UpdatedAt = DateTimeOffset.UtcNow,
-        State = new ResearchState
         {
-            MainTask = "topic",
-            MinWords = minWords,
-            MaxWords = maxWords,
-            Draft = draft,
-            ReviewNotes = "review",
-        },
-    };
+            Id = Guid.NewGuid().ToString("N"),
+            OwnerId = "owner",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            State = new ResearchState
+            {
+                MainTask = "topic",
+                MinWords = minWords,
+                MaxWords = maxWords,
+                Draft = draft,
+                ReviewNotes = "review",
+            },
+        };
 
     private sealed class StubSessionService : IBlogWriterSessionService
     {

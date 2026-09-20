@@ -14,16 +14,13 @@ public sealed class BlogWriterSessionService(
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
-        if (minWords <= 0 || maxWords < minWords)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxWords), "Word-count bounds must be positive and ordered.");
-        }
+        WordRange range = WordRange.Create(minWords, maxWords);
 
         BlogSession session = await _sessionStore.CreateAsync(new ResearchState
         {
             MainTask = prompt.Trim(),
-            MinWords = minWords,
-            MaxWords = maxWords,
+            MinWords = range.Min,
+            MaxWords = range.Max,
         }, cancellationToken);
 
         session.State = await _workflow.RunAsync(session.State, cancellationToken);
@@ -34,10 +31,13 @@ public sealed class BlogWriterSessionService(
     public async Task<BlogSession> ReviseAsync(
         BlogSession session,
         string revision,
+        int minWords,
+        int maxWords,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        WordRange range = WordRange.Create(minWords, maxWords);
 
         var candidate = new BlogSession
         {
@@ -49,6 +49,8 @@ public sealed class BlogWriterSessionService(
             State = Clone(session.State),
         };
 
+        candidate.State.MinWords = range.Min;
+        candidate.State.MaxWords = range.Max;
         candidate.State.StartFollowUp(revision);
         candidate.State = await _workflow.RunAsync(candidate.State, cancellationToken);
         await _sessionStore.SaveAsync(candidate, cancellationToken);

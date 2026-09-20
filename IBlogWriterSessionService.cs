@@ -11,6 +11,8 @@ public interface IBlogWriterSessionService
     Task<BlogSession> ReviseAsync(
         BlogSession session,
         string revision,
+        int minWords,
+        int maxWords,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<BlogSessionSummary>> ListAsync(CancellationToken cancellationToken = default);

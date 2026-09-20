@@ -41,6 +41,13 @@
                          Disabled="@(Workspace.State.IsProcessing || Workspace.State.ActiveSession is null)" />
         </section>
 
+        <WordRangeInput MinValue="@Workspace.State.MinWordsInput"
+                MinValueChanged="Workspace.UpdateMinWords"
+                MaxValue="@Workspace.State.MaxWordsInput"
+                MaxValueChanged="Workspace.UpdateMaxWords"
+                MinError="@Workspace.State.MinWordsError"
+                MaxError="@Workspace.State.MaxWordsError" />
+
         <section class="work-grid">
             @if (Workspace.State.Mode == WorkspaceMode.List)
             {

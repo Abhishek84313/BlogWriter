@@ -38,7 +38,7 @@
                          Value="@Workspace.State.RevisionPrompt"
                          ValueChanged="value => Workspace.State.RevisionPrompt = value"
                          Submit="Workspace.SubmitRevisionAsync"
-                         Disabled="@(Workspace.State.IsProcessing || Workspace.State.ActiveSession is null)" />
+                         Disabled="@(!Workspace.State.IsReviseEnabled)" />
         </section>
 
         <WordRangeInput MinValue="@Workspace.State.MinWordsInput"
@@ -72,22 +72,17 @@
         <footer class="workspace-footer">
             <CommandBar New="() => RequestTransitionAsync(PendingAction.New)"
                         List="() => RequestTransitionAsync(PendingAction.List)"
+                        SelectionChanged="Workspace.LaunchSelectionAsync"
+                        SelectionVisible="@Workspace.State.IsSelectionVisible"
+                        SelectionInput="@Workspace.State.SelectionInput"
+                        SelectionError="@Workspace.State.SelectionError"
                         Revise="Workspace.LoadSelectionAsync"
                         Quit="() => RequestTransitionAsync(PendingAction.Quit)"
+                        Help="ShowHelp"
                         ReviseEnabled="@Workspace.State.IsReviseEnabled" />
 
             <WorkflowLog Entries="@Workspace.State.WorkflowLog" />
 
-            @if (Workspace.State.IsSelectionVisible)
-            {
-                <div class="session-selector">
-                    <label for="session-number">Session number</label>
-                    <input id="session-number"
-                           inputmode="numeric"
-                           value="@Workspace.State.SelectionInput"
-                           @oninput="args => Workspace.State.SelectionInput = args.Value?.ToString() ?? string.Empty" />
-                </div>
-            }
         </footer>
 
     }
@@ -98,10 +93,16 @@
     <ConfirmDiscardDialog Accept="ConfirmTransitionAsync" Decline="DeclineTransition" />
 }
 
+@if (_showHelpDialog)
+{
+    <RunCommandDialog Closed="CloseHelp" />
+}
+
 @code {
     private PromptInput? _initialPrompt;
     private PendingAction _pendingAction;
     private bool _showDiscardDialog;
+    private bool _showHelpDialog;
 
     protected override void OnInitialized() => Workspace.Changed += HandleWorkspaceChanged;
 
@@ -138,6 +139,10 @@
         _showDiscardDialog = false;
         _pendingAction = PendingAction.None;
     }
+
+    private void ShowHelp() => _showHelpDialog = true;
+
+    private void CloseHelp() => _showHelpDialog = false;
 
     private Task<WorkspaceTransitionResult> ExecuteTransitionAsync(PendingAction action, bool discardConfirmed) =>
         action switch

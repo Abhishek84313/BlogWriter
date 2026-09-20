@@ -1,8 +1,28 @@
 <nav class="command-bar" aria-label="Workspace commands">
     <button type="button" data-command="new" @onclick="New">New</button>
-    <button type="button" data-command="list" @onclick="List">List</button>
+    <div class="list-command">
+        <button type="button" data-command="list" @onclick="List">List</button>
+        @if (SelectionVisible)
+        {
+            <label class="sr-only" for="command-session-number">Saved session number</label>
+            <input id="command-session-number"
+                   data-command="session-number"
+                   inputmode="numeric"
+                   maxlength="3"
+                   pattern="[0-9]*"
+                   value="@SelectionInput"
+                   aria-invalid="@(!string.IsNullOrWhiteSpace(SelectionError))"
+                   aria-describedby="command-session-error"
+                   @onchange="HandleSelectionChanged" />
+            @if (!string.IsNullOrWhiteSpace(SelectionError))
+            {
+                <span id="command-session-error" class="sr-only">@SelectionError</span>
+            }
+        }
+    </div>
     <button type="button" data-command="revise" @onclick="Revise" disabled="@(!ReviseEnabled)">Revise</button>
     <button type="button" data-command="quit" @onclick="Quit">Quit</button>
+    <button type="button" class="help-command" data-command="help" aria-label="Help" @onclick="Help">?</button>
 </nav>
 
 @code {
@@ -13,11 +33,29 @@
     public EventCallback List { get; set; }
 
     [Parameter]
+    public EventCallback<string> SelectionChanged { get; set; }
+
+    [Parameter]
+    public bool SelectionVisible { get; set; }
+
+    [Parameter]
+    public string SelectionInput { get; set; } = "";
+
+    [Parameter]
+    public string? SelectionError { get; set; }
+
+    [Parameter]
     public EventCallback Revise { get; set; }
 
     [Parameter]
     public EventCallback Quit { get; set; }
 
     [Parameter]
+    public EventCallback Help { get; set; }
+
+    [Parameter]
     public bool ReviseEnabled { get; set; }
+
+    private Task HandleSelectionChanged(ChangeEventArgs args) =>
+        SelectionChanged.InvokeAsync(args.Value?.ToString() ?? "");
 }

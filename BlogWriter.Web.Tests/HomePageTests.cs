@@ -11,7 +11,7 @@ public sealed class HomePageTests : BunitContext
     public HomePageTests() => JSInterop.Mode = JSRuntimeMode.Loose;
 
     [Fact]
-    public void Home_RendersWritingWorkspaceAndFourCommands()
+    public void Home_RendersWritingWorkspaceAndFiveCommands()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();
 
@@ -21,7 +21,7 @@ public sealed class HomePageTests : BunitContext
         Assert.NotNull(cut.Find("#revision-prompt"));
         Assert.NotNull(cut.Find("[aria-labelledby='draft-heading']"));
         Assert.NotNull(cut.Find("[aria-labelledby='review-heading']"));
-        Assert.Equal(["New", "List", "Revise", "Quit"],
+        Assert.Equal(["New", "List", "Revise", "Quit", "?"],
             cut.FindAll(".command-bar button").Select(button => button.TextContent.Trim()).ToArray());
         Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
         Assert.False(workspace.State.IsSelectionVisible);
@@ -53,8 +53,9 @@ public sealed class HomePageTests : BunitContext
         cut.Find("button[data-command='list']").Click();
         cut.WaitForAssertion(() =>
         {
-            Assert.NotNull(cut.Find("#session-number"));
+            Assert.NotNull(cut.Find("#command-session-number"));
             Assert.False(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+            Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
             Assert.Contains("[1]", cut.Find(".session-list").TextContent);
         });
     }
@@ -88,6 +89,7 @@ public sealed class HomePageTests : BunitContext
         Assert.False(cut.Find("button[data-command='list']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[data-command='quit']").HasAttribute("disabled"));
         Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
     }
 
     [Fact]
@@ -151,11 +153,9 @@ public sealed class HomePageTests : BunitContext
         ]);
         IRenderedComponent<Home> cut = Render<Home>();
         cut.Find("button[data-command='list']").Click();
-        cut.WaitForElement("#session-number").Input("1");
+        cut.WaitForElement("#command-session-number").Change("1");
 
-        cut.Find("button[data-command='revise']").Click();
-
-        cut.WaitForAssertion(() => Assert.Equal("loaded", workspace.State.Draft));
+        cut.WaitForAssertion(() => Assert.Equal("draft", workspace.State.Draft));
     }
 
     [Fact]

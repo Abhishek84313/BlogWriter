@@ -29,4 +29,18 @@ public sealed class WorkflowLogTests : BunitContext
         Assert.Equal(["Progress: started", "Failure: <failed>"], cut.FindAll("li").Select(item => item.TextContent).ToArray());
         Assert.Contains("&lt;failed&gt;", cut.Markup);
     }
+
+    [Fact]
+    public void WorkflowLog_RetainsOlderEntriesForScrolling()
+    {
+        IReadOnlyList<WorkflowLogEntry> entries = Enumerable.Range(1, 5)
+            .Select(index => new WorkflowLogEntry($"entry {index}", WorkflowOutputOutcome.Progress))
+            .ToList();
+
+        IRenderedComponent<WorkflowLog> cut = Render<WorkflowLog>(parameters => parameters
+            .Add(component => component.Entries, entries));
+
+        Assert.Equal(5, cut.FindAll("li").Count);
+        Assert.Contains("workflow-log", cut.Find("section").ClassList);
+    }
 }

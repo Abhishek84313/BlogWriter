@@ -107,6 +107,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
         State.SelectionInput = "";
+        State.SelectionError = null;
         State.ValidationMessage = null;
         State.StatusMessage = "Loading saved sessions...";
         State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
@@ -157,6 +158,53 @@ public sealed class BlogWorkspaceService : IDisposable
         {
             SetValidation("Unable to load the selected session. Try again.");
         }
+    }
+
+    public async Task LaunchSelectionAsync(string input)
+    {
+        State.SelectionInput = input;
+        State.SelectionError = null;
+
+        if (State.IsProcessing)
+        {
+            SetSelectionError("Wait for the current writing operation to finish.");
+            return;
+        }
+
+        if (!SessionListSelection.TryResolve(input, State.DisplayedSessions, out BlogSessionSummary? summary))
+        {
+            SetSelectionError("Enter a valid number from the current saved-session list.");
+            return;
+        }
+
+        BlogSession? session;
+        try
+        {
+            session = await _sessions.LoadAsync(summary!.Id);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            SetSelectionError("Unable to load the selected session. Try again.");
+            return;
+        }
+
+        if (session is null)
+        {
+            SetSelectionError("That saved session is no longer available. Refresh the list and try again.");
+            return;
+        }
+
+        State.Draft = "";
+        State.Review = "";
+        State.ReviewerUpdateKeys.Clear();
+        State.InitialPrompt = session.State.MainTask;
+        State.RevisionPrompt = session.State.CurrentSubTask;
+        State.ActiveSession = null;
+        State.SelectionError = null;
+        State.ValidationMessage = null;
+        NotifyChanged();
+
+        await SubmitInitialAsync();
     }
 
     public async Task<WorkspaceTransitionResult> QuitAsync(bool discardConfirmed)
@@ -354,6 +402,7 @@ public sealed class BlogWorkspaceService : IDisposable
         }
         State.DisplayedSessions = [];
         State.SelectionInput = "";
+        State.SelectionError = null;
         State.Mode = WorkspaceMode.Draft;
         State.ValidationMessage = null;
         NotifyChanged();
@@ -371,6 +420,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.ActiveSession = null;
         State.DisplayedSessions = [];
         State.SelectionInput = "";
+        State.SelectionError = null;
         State.IsProcessing = false;
         State.StatusMessage = null;
         State.ValidationMessage = null;
@@ -379,6 +429,14 @@ public sealed class BlogWorkspaceService : IDisposable
 
     private void SetValidation(string message)
     {
+        State.ValidationMessage = message;
+        State.AppendLog(message, WorkflowOutputOutcome.Validation);
+        NotifyChanged();
+    }
+
+    private void SetSelectionError(string message)
+    {
+        State.SelectionError = message;
         State.ValidationMessage = message;
         State.AppendLog(message, WorkflowOutputOutcome.Validation);
         NotifyChanged();

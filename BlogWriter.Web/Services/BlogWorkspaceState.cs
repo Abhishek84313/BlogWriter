@@ -31,6 +31,7 @@ public sealed class BlogWorkspaceState
     public BlogSession? ActiveSession { get; internal set; }
     public IReadOnlyList<BlogSessionSummary> DisplayedSessions { get; internal set; } = [];
     public string SelectionInput { get; set; } = "";
+    public string? SelectionError { get; internal set; }
     public bool IsProcessing { get; internal set; }
     public string? StatusMessage { get; internal set; }
     public string? ValidationMessage { get; internal set; }
@@ -72,7 +73,7 @@ public sealed class BlogWorkspaceState
             : $"{Review}\n\n{message}";
     }
 
-    public bool IsSelectionVisible => Mode == WorkspaceMode.List && DisplayedSessions.Count > 0;
+    public bool IsSelectionVisible => Mode == WorkspaceMode.List;
     public bool IsReviseEnabled => IsSelectionVisible && !IsProcessing;
     public bool HasUnsavedRange
     {

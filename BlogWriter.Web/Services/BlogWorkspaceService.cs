@@ -23,10 +23,20 @@ public sealed class BlogWorkspaceService : IDisposable
 
     public event Action? Changed;
 
-    public Task SubmitInitialAsync() => RunSessionOperationAsync(
-        State.InitialPrompt,
-        cancellationToken => _sessions.StartAsync(State.InitialPrompt, cancellationToken: cancellationToken),
-        clearInput: () => State.InitialPrompt = "");
+    public Task SubmitInitialAsync()
+    {
+        if (!TryCaptureRange(out WordRange range))
+        {
+            return Task.CompletedTask;
+        }
+
+        string prompt = State.InitialPrompt;
+        return RunSessionOperationAsync(
+            prompt,
+            range,
+            cancellationToken => _sessions.StartAsync(prompt, range.Min, range.Max, cancellationToken),
+            clearInput: () => State.InitialPrompt = "");
+    }
 
     public Task SubmitRevisionAsync()
     {
@@ -37,10 +47,34 @@ public sealed class BlogWorkspaceService : IDisposable
         }
 
         BlogSession activeSession = State.ActiveSession;
+        if (!TryCaptureRange(out WordRange range))
+        {
+            return Task.CompletedTask;
+        }
+
+        string revision = State.RevisionPrompt;
         return RunSessionOperationAsync(
-            State.RevisionPrompt,
-            cancellationToken => _sessions.ReviseAsync(activeSession, State.RevisionPrompt, cancellationToken),
+            revision,
+            range,
+            cancellationToken => _sessions.ReviseAsync(
+                activeSession,
+                revision,
+                range.Min,
+                range.Max,
+                cancellationToken),
             clearInput: () => State.RevisionPrompt = "");
+    }
+
+    public void UpdateMinWords(string value)
+    {
+        State.MinWordsInput = value;
+        ValidateVisibleRange();
+    }
+
+    public void UpdateMaxWords(string value)
+    {
+        State.MaxWordsInput = value;
+        ValidateVisibleRange();
     }
 
     public async Task<WorkspaceTransitionResult> NewAsync(bool discardConfirmed)
@@ -63,6 +97,7 @@ public sealed class BlogWorkspaceService : IDisposable
         }
 
         await CancelActiveOperationAsync();
+        RestoreAcceptedRange();
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
         State.SelectionInput = "";
@@ -146,6 +181,7 @@ public sealed class BlogWorkspaceService : IDisposable
 
     private async Task RunSessionOperationAsync(
         string input,
+        WordRange submittedRange,
         Func<CancellationToken, Task<BlogSession>> operation,
         Action clearInput)
     {
@@ -186,7 +222,7 @@ public sealed class BlogWorkspaceService : IDisposable
             }
 
             clearInput();
-            Publish(session);
+            Publish(session, submittedRange);
             State.StatusMessage = "Writing complete.";
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -259,8 +295,28 @@ public sealed class BlogWorkspaceService : IDisposable
             TaskScheduler.Default);
     }
 
-    private void Publish(BlogSession session)
+    private void Publish(BlogSession session, WordRange? submittedRange = null)
     {
+        WordRange persistedRange = GetSessionRange(session);
+        if (submittedRange is null)
+        {
+            SetAcceptedAndVisibleRange(persistedRange);
+        }
+        else
+        {
+            WordRangeValidation visibleRange = WordRange.Parse(State.MinWordsInput, State.MaxWordsInput);
+            bool editedDuringProcessing = !visibleRange.IsValid || visibleRange.Range != submittedRange;
+            State.AcceptedRange = submittedRange.Value;
+            if (!editedDuringProcessing)
+            {
+                SetVisibleRange(persistedRange);
+            }
+            else
+            {
+                ValidateVisibleRange(notify: false);
+            }
+        }
+
         State.ActiveSession = session;
         State.Draft = session.State.Draft;
         State.Review = session.State.ReviewNotes;
@@ -276,6 +332,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.Mode = mode;
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
+        SetAcceptedAndVisibleRange(WordRange.Default);
         State.Draft = "";
         State.Review = "";
         State.ActiveSession = null;
@@ -291,6 +348,64 @@ public sealed class BlogWorkspaceService : IDisposable
     {
         State.ValidationMessage = message;
         NotifyChanged();
+    }
+
+    private bool TryCaptureRange(out WordRange range)
+    {
+        WordRangeValidation validation = ValidateVisibleRange(notify: false);
+        if (validation.Range is not WordRange validRange)
+        {
+            range = default;
+            State.ValidationMessage = "Correct Min and Max before submitting.";
+            NotifyChanged();
+            return false;
+        }
+
+        range = validRange;
+        State.ValidationMessage = null;
+        return true;
+    }
+
+    private WordRangeValidation ValidateVisibleRange(bool notify = true)
+    {
+        WordRangeValidation validation = WordRange.Parse(State.MinWordsInput, State.MaxWordsInput);
+        State.MinWordsError = validation.MinError;
+        State.MaxWordsError = validation.MaxError;
+        if (validation.IsValid && State.ValidationMessage == "Correct Min and Max before submitting.")
+        {
+            State.ValidationMessage = null;
+        }
+
+        if (notify)
+        {
+            NotifyChanged();
+        }
+
+        return validation;
+    }
+
+    private static WordRange GetSessionRange(BlogSession session)
+    {
+        WordRangeValidation validation = WordRange.Parse(
+            session.State.MinWords.ToString(),
+            session.State.MaxWords.ToString());
+        return validation.Range ?? WordRange.Default;
+    }
+
+    private void RestoreAcceptedRange() => SetVisibleRange(State.AcceptedRange);
+
+    private void SetAcceptedAndVisibleRange(WordRange range)
+    {
+        State.AcceptedRange = range;
+        SetVisibleRange(range);
+    }
+
+    private void SetVisibleRange(WordRange range)
+    {
+        State.MinWordsInput = range.Min.ToString();
+        State.MaxWordsInput = range.Max.ToString();
+        State.MinWordsError = null;
+        State.MaxWordsError = null;
     }
 
     private void NotifyChanged() => Changed?.Invoke();

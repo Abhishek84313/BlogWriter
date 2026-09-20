@@ -28,6 +28,21 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_PlacesDefaultWordRangeBetweenPromptsAndContentPanes()
+    {
+        RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+        string markup = cut.Markup;
+
+        Assert.True(markup.IndexOf("prompt-strip", StringComparison.Ordinal) <
+            markup.IndexOf("word-range-row", StringComparison.Ordinal));
+        Assert.True(markup.IndexOf("word-range-row", StringComparison.Ordinal) <
+            markup.IndexOf("work-grid", StringComparison.Ordinal));
+        Assert.Equal("1000", cut.Find("#min-words").GetAttribute("value"));
+        Assert.Equal("2000", cut.Find("#max-words").GetAttribute("value"));
+    }
+
+    [Fact]
     public void Home_ShowsNumberInputAndEnablesReviseForNonEmptyList()
     {
         BlogWorkspaceService workspace = RegisterWorkspace([
@@ -151,7 +166,12 @@ public sealed class HomePageTests : BunitContext
         public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default) =>
             Task.FromResult(CreateSession(prompt));
 
-        public Task<BlogSession> ReviseAsync(BlogSession session, string revision, CancellationToken cancellationToken = default) =>
+        public Task<BlogSession> ReviseAsync(
+            BlogSession session,
+            string revision,
+            int minWords,
+            int maxWords,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(session);
 
         public Task<IReadOnlyList<BlogSessionSummary>> ListAsync(CancellationToken cancellationToken = default) =>

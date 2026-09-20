@@ -1,0 +1,59 @@
+<section class="word-range-row" aria-labelledby="word-range-heading">
+    <span id="word-range-heading" class="range-heading">Target words</span>
+
+    <div class="range-field">
+        <label for="min-words">Min</label>
+        <input id="min-words"
+               type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               value="@MinValue"
+               @oninput="args => MinValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"
+               aria-invalid="@(MinError is null ? "false" : "true")"
+               aria-describedby="@(MinError is null ? "min-words-help" : "min-words-help min-words-error")" />
+        <span id="min-words-help" class="sr-only">Minimum target word count. Positive whole numbers only.</span>
+        @if (MinError is not null)
+        {
+            <span id="min-words-error" class="range-error">@MinError</span>
+        }
+    </div>
+
+    <span class="range-separator" aria-hidden="true">to</span>
+
+    <div class="range-field">
+        <label for="max-words">Max</label>
+        <input id="max-words"
+               type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               value="@MaxValue"
+               @oninput="args => MaxValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"
+               aria-invalid="@(MaxError is null ? "false" : "true")"
+               aria-describedby="@(MaxError is null ? "max-words-help" : "max-words-help max-words-error")" />
+        <span id="max-words-help" class="sr-only">Maximum target word count. Must be at least Min.</span>
+        @if (MaxError is not null)
+        {
+            <span id="max-words-error" class="range-error">@MaxError</span>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string MinValue { get; set; } = ResearchState.DefaultMinWords.ToString();
+
+    [Parameter]
+    public EventCallback<string> MinValueChanged { get; set; }
+
+    [Parameter]
+    public string MaxValue { get; set; } = ResearchState.DefaultMaxWords.ToString();
+
+    [Parameter]
+    public EventCallback<string> MaxValueChanged { get; set; }
+
+    [Parameter]
+    public string? MinError { get; set; }
+
+    [Parameter]
+    public string? MaxError { get; set; }
+}

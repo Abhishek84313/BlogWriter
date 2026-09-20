@@ -7,7 +7,6 @@ public sealed class WorkspaceBrowserTests
     [InlineData(1440, 900)]
     public void RequiredViewports_AreExplicitlyCovered(int width, int height)
     {
-        Assert.True(width > 0);
-        Assert.True(height > 0);
+        Assert.Contains((width, height), new[] { (390, 844), (1440, 900) });
     }
 }

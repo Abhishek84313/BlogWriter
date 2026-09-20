@@ -22,6 +22,8 @@ public sealed class BlogWriterSessionServiceTests
         Assert.Equal("topic", session.State.MainTask);
         Assert.Equal("draft", session.State.Draft);
         Assert.Equal("review", session.State.ReviewNotes);
+        Assert.Equal(500, session.State.MinWords);
+        Assert.Equal(900, session.State.MaxWords);
         Assert.Equal(1, store.CreateCalls);
         Assert.Equal(1, store.SaveCalls);
     }
@@ -35,7 +37,8 @@ public sealed class BlogWriterSessionServiceTests
             store);
         BlogSession original = CreateSession("original draft", "original review");
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReviseAsync(original, "change it"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ReviseAsync(original, "change it", 500, 900));
 
         Assert.Equal("original draft", original.State.Draft);
         Assert.Equal("original review", original.State.ReviewNotes);
@@ -55,11 +58,33 @@ public sealed class BlogWriterSessionServiceTests
             }),
             store);
 
-        BlogSession revised = await service.ReviseAsync(CreateSession("old", "old review"), "change it");
+        BlogSession revised = await service.ReviseAsync(
+            CreateSession("old", "old review"),
+            "change it",
+            600,
+            800);
 
         Assert.Equal("revised", revised.State.Draft);
         Assert.Equal("approved", revised.State.ReviewNotes);
+        Assert.Equal(600, revised.State.MinWords);
+        Assert.Equal(800, revised.State.MaxWords);
         Assert.Equal(1, store.SaveCalls);
+    }
+
+    [Fact]
+    public async Task InvalidRange_DoesNotRunWorkflowOrPersist()
+    {
+        var store = new RecordingStore();
+        var workflow = new StubWorkflow(state => state);
+        var service = new BlogWriterSessionService(workflow, store);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.StartAsync("topic", 900, 500));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            service.ReviseAsync(CreateSession("draft", "review"), "change it", 0, 500));
+
+        Assert.Equal(0, workflow.CallCount);
+        Assert.Equal(0, store.CreateCalls);
+        Assert.Equal(0, store.SaveCalls);
     }
 
     [Fact]
@@ -89,9 +114,12 @@ public sealed class BlogWriterSessionServiceTests
 
     private sealed class StubWorkflow(Func<ResearchState, ResearchState> run) : IBlogWorkflow
     {
+        public int CallCount { get; private set; }
+
         public Task<ResearchState> RunAsync(ResearchState state, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
             return Task.FromResult(run(state));
         }
     }

@@ -82,6 +82,15 @@ dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "Cosmos:C
 `Testing`. It exists for automated browser checks and must never be enabled in a
 development, staging, or production deployment.
 
+### Word-count controls
+
+The web workspace displays `Min` and `Max` between the prompt inputs and the
+Draft/Reviewer panes. They default to 1000 and 2000, accept positive whole numbers,
+and require Max to be at least Min. The values are session state, not configuration
+keys: loading a saved session restores its range, and a successful revision persists
+the updated range. Unsaved range changes participate in the existing New/List/Quit
+discard confirmation.
+
 ## Keeping prompts in sync
 
 Each hosted agent's `AgentPrompt.cs` must be kept in sync with the corresponding section

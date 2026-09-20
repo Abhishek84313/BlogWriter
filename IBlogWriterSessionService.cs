@@ -6,14 +6,16 @@ public interface IBlogWriterSessionService
         string prompt,
         int minWords = ResearchState.DefaultMinWords,
         int maxWords = ResearchState.DefaultMaxWords,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IProgress<WorkflowOutputUpdate>? output = null);
 
     Task<BlogSession> ReviseAsync(
         BlogSession session,
         string revision,
         int minWords,
         int maxWords,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IProgress<WorkflowOutputUpdate>? output = null);
 
     Task<IReadOnlyList<BlogSessionSummary>> ListAsync(CancellationToken cancellationToken = default);
 

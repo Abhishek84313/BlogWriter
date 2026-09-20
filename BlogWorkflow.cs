@@ -22,16 +22,24 @@ public class BlogWorkflow(
     // Emits the root span for a workflow run. Activated by the ActivityListener
     // registered in Program.cs (or an OpenTelemetry TracerProvider).
     private static readonly ActivitySource s_activitySource = new("BlogWriter.Workflow");
+    private static long s_operationVersion;
 
-    public async Task<ResearchState> RunAsync(ResearchState state, CancellationToken cancellationToken = default)
+    public async Task<ResearchState> RunAsync(
+        ResearchState state,
+        CancellationToken cancellationToken = default,
+        IProgress<WorkflowOutputUpdate>? output = null)
     {
+        long operationVersion = Interlocked.Increment(ref s_operationVersion);
+        var publisher = new WorkflowOutputPublisher(output, operationVersion);
+        publisher.PublishLifecycle(WorkflowOutputOutcome.Progress, "Writing workflow started.");
+
         using Activity? activity = s_activitySource.StartActivity("Workflow.Run");
         activity?.SetTag("blog.topic", state.MainTask);
 
         var bloggerExecutor = new BloggerExecutor(blogger);
         var researcherExecutor = new ResearcherExecutor(researcher);
         var authorExecutor = new AuthorExecutor(author);
-        var reviewerExecutor = new ReviewerExecutor(reviewer);
+        var reviewerExecutor = new ReviewerExecutor(reviewer, publisher);
 
         Workflow workflow = new WorkflowBuilder(bloggerExecutor)
             .AddEdge(bloggerExecutor, researcherExecutor)
@@ -59,14 +67,17 @@ public class BlogWorkflow(
             {
                 case ExecutorInvokedEvent invoked:
                     logger.LogInformation("[workflow] -> {ExecutorId} started", invoked.ExecutorId);
+                    publisher.PublishLifecycle(WorkflowOutputOutcome.Progress, $"{invoked.ExecutorId} started.");
                     break;
 
                 case ExecutorCompletedEvent completed:
                     logger.LogInformation("[workflow] {ExecutorId} completed", completed.ExecutorId);
+                    publisher.PublishLifecycle(WorkflowOutputOutcome.Progress, $"{completed.ExecutorId} completed.");
                     break;
 
                 case ExecutorFailedEvent failed:
                     logger.LogError(failed.Data as Exception, "[workflow] {ExecutorId} failed", failed.ExecutorId);
+                    publisher.PublishLifecycle(WorkflowOutputOutcome.Failure, $"{failed.ExecutorId} failed.");
 
                     // A token-cap breach must abort the whole run, not just the
                     // node. Re-throw it so it unwinds to the application entry point.
@@ -81,6 +92,7 @@ public class BlogWorkflow(
                 case WorkflowOutputEvent { Data: ResearchState finalState }:
                     // The reviewer yielded the final, approved (or revision-capped) state.
                     result = finalState;
+                    publisher.PublishLifecycle(WorkflowOutputOutcome.Success, "Writing workflow completed.");
                     break;
             }
         }

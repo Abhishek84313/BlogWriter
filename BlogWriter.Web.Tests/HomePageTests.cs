@@ -105,6 +105,30 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_PlacesWorkflowLogDirectlyBelowCommandBar()
+    {
+        RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+        string markup = cut.Markup;
+
+        Assert.True(markup.IndexOf("command-bar", StringComparison.Ordinal) <
+            markup.IndexOf("workflow-log", StringComparison.Ordinal));
+        Assert.DoesNotContain("status-stack", markup);
+    }
+
+    [Fact]
+    public void Home_PreservesKeyboardOrderFromCommandsToLogToContent()
+    {
+        RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+        string markup = cut.Markup;
+
+        Assert.True(markup.IndexOf("command-bar", StringComparison.Ordinal) <
+            markup.IndexOf("workflow-log", StringComparison.Ordinal));
+        Assert.Equal("0", cut.Find(".workflow-log").GetAttribute("tabindex"));
+    }
+
+    [Fact]
     public void Home_EnterSubmitsAndShiftEnterDoesNotSubmit()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();
@@ -163,7 +187,7 @@ public sealed class HomePageTests : BunitContext
     {
         public IReadOnlyList<BlogSessionSummary> Summaries { get; init; } = [];
 
-        public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default) =>
+        public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default, IProgress<WorkflowOutputUpdate>? output = null) =>
             Task.FromResult(CreateSession(prompt));
 
         public Task<BlogSession> ReviseAsync(
@@ -171,7 +195,8 @@ public sealed class HomePageTests : BunitContext
             string revision,
             int minWords,
             int maxWords,
-            CancellationToken cancellationToken = default) =>
+            CancellationToken cancellationToken = default,
+            IProgress<WorkflowOutputUpdate>? output = null) =>
             Task.FromResult(session);
 
         public Task<IReadOnlyList<BlogSessionSummary>> ListAsync(CancellationToken cancellationToken = default) =>

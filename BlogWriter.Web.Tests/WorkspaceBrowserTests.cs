@@ -9,4 +9,5 @@ public sealed class WorkspaceBrowserTests
     {
         Assert.Contains((width, height), new[] { (390, 844), (1440, 900) });
     }
+
 }

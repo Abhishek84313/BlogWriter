@@ -1,5 +1,7 @@
 namespace BlogWriter.Web.Services;
 
+public sealed record WorkflowLogEntry(string Message, WorkflowOutputOutcome Outcome);
+
 public enum WorkspaceMode
 {
     New,
@@ -32,6 +34,43 @@ public sealed class BlogWorkspaceState
     public bool IsProcessing { get; internal set; }
     public string? StatusMessage { get; internal set; }
     public string? ValidationMessage { get; internal set; }
+    public IReadOnlyList<WorkflowLogEntry> WorkflowLog { get; internal set; } = [];
+
+    internal HashSet<string> ReviewerUpdateKeys { get; } = new(StringComparer.Ordinal);
+
+    internal void AppendLog(string message, WorkflowOutputOutcome outcome)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        WorkflowLog = [.. WorkflowLog, new WorkflowLogEntry(message, outcome)];
+    }
+
+    internal void ClearOutput()
+    {
+        WorkflowLog = [];
+        ReviewerUpdateKeys.Clear();
+    }
+
+    internal void AppendReviewerFeedback(string message, string updateKey)
+    {
+        if (string.IsNullOrWhiteSpace(message) || !ReviewerUpdateKeys.Add(updateKey))
+        {
+            return;
+        }
+
+        if (string.Equals(Review, message, StringComparison.Ordinal) ||
+            Review.EndsWith($"\n\n{message}", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Review = string.IsNullOrWhiteSpace(Review)
+            ? message
+            : $"{Review}\n\n{message}";
+    }
 
     public bool IsSelectionVisible => Mode == WorkspaceMode.List && DisplayedSessions.Count > 0;
     public bool IsReviseEnabled => IsSelectionVisible && !IsProcessing;

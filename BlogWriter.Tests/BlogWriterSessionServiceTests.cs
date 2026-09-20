@@ -102,6 +102,21 @@ public sealed class BlogWriterSessionServiceTests
         Assert.Same(existing, loaded);
     }
 
+    [Fact]
+    public async Task StartAndReviseAsync_ForwardOutputObserverToWorkflow()
+    {
+        var workflow = new StubWorkflow(state => state);
+        var service = new BlogWriterSessionService(workflow, new RecordingStore());
+        var output = new Progress<WorkflowOutputUpdate>();
+
+        await service.StartAsync("topic", output: output);
+        Assert.Same(output, workflow.LastOutput);
+
+        BlogSession session = CreateSession("draft", "review");
+        await service.ReviseAsync(session, "change it", 500, 900, output: output);
+        Assert.Same(output, workflow.LastOutput);
+    }
+
     private static BlogSession CreateSession(string draft, string review) => new()
     {
         Id = Guid.NewGuid().ToString("N"),
@@ -115,11 +130,16 @@ public sealed class BlogWriterSessionServiceTests
     private sealed class StubWorkflow(Func<ResearchState, ResearchState> run) : IBlogWorkflow
     {
         public int CallCount { get; private set; }
+        public IProgress<WorkflowOutputUpdate>? LastOutput { get; private set; }
 
-        public Task<ResearchState> RunAsync(ResearchState state, CancellationToken cancellationToken = default)
+        public Task<ResearchState> RunAsync(
+            ResearchState state,
+            CancellationToken cancellationToken = default,
+            IProgress<WorkflowOutputUpdate>? output = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             CallCount++;
+            LastOutput = output;
             return Task.FromResult(run(state));
         }
     }

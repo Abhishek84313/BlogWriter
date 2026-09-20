@@ -91,6 +91,15 @@ keys: loading a saved session restores its range, and a successful revision pers
 the updated range. Unsaved range changes participate in the existing New/List/Quit
 discard confirmation.
 
+### Workflow log and Reviewer notes
+
+The web workspace places an ordered workflow log directly beneath the command buttons.
+It contains progress, success, validation, cancellation, conflict, and failure output;
+the separate status/validation stack is not used. Reviewer feedback is routed to the
+Reviewer notes pane as it becomes available and is retained across revisions for the
+active session. New and loading a different saved session clear transient log history
+and reviewer history; incremental output is not persisted as a separate record.
+
 ## Keeping prompts in sync
 
 Each hosted agent's `AgentPrompt.cs` must be kept in sync with the corresponding section

@@ -34,12 +34,19 @@ internal sealed partial class AuthorExecutor(IAuthorAgent author) : Executor("Au
 /// Reviews the draft and records approval / revision notes. Acts as the terminal
 /// output node: when no further revision is needed it yields the final state.
 /// </summary>
-internal sealed partial class ReviewerExecutor(IReviewerAgent reviewer) : Executor("Reviewer")
+internal sealed partial class ReviewerExecutor(
+    IReviewerAgent reviewer,
+    WorkflowOutputPublisher? publisher) : Executor("Reviewer")
 {
     [MessageHandler]
     private async ValueTask<ResearchState> HandleAsync(ResearchState state, IWorkflowContext context, CancellationToken cancellationToken)
     {
         state = await reviewer.ReviewerNodeAsync(state, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(state.ReviewNotes))
+        {
+            publisher?.PublishReviewer(state.ReviewNotes, state.RevisionNumber);
+        }
 
         if (!state.NeedsRevision)
         {

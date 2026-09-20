@@ -76,6 +76,8 @@
                         Quit="() => RequestTransitionAsync(PendingAction.Quit)"
                         ReviseEnabled="@Workspace.State.IsReviseEnabled" />
 
+            <WorkflowLog Entries="@Workspace.State.WorkflowLog" />
+
             @if (Workspace.State.IsSelectionVisible)
             {
                 <div class="session-selector">
@@ -88,16 +90,6 @@
             }
         </footer>
 
-        <div class="status-stack" aria-live="polite" aria-atomic="true">
-            @if (!string.IsNullOrWhiteSpace(Workspace.State.StatusMessage))
-            {
-                <p class="status-message">@Workspace.State.StatusMessage</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(Workspace.State.ValidationMessage))
-            {
-                <p class="validation-message" role="alert">@Workspace.State.ValidationMessage</p>
-            }
-        </div>
     }
 </div>
 

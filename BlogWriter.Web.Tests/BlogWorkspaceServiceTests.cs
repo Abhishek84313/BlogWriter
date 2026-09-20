@@ -5,6 +5,41 @@ namespace BlogWriter.Web.Tests;
 public sealed class BlogWorkspaceServiceTests
 {
     [Fact]
+    public async Task NewState_EnablesRevisionInputButNotRevise()
+    {
+        var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
+
+        Assert.True(workspace.State.IsRevisionInputEnabled);
+        Assert.False(workspace.State.IsReviseEnabled);
+
+        await workspace.NewAsync(true);
+
+        Assert.True(workspace.State.IsRevisionInputEnabled);
+        Assert.False(workspace.State.IsReviseEnabled);
+    }
+
+    [Fact]
+    public async Task DraftState_EnablesRevisionInputAndRevise()
+    {
+        var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+
+        await workspace.SubmitInitialAsync();
+
+        Assert.True(workspace.State.IsRevisionInputEnabled);
+        Assert.True(workspace.State.IsReviseEnabled);
+    }
+
+    [Fact]
+    public async Task ListUpdates_ReplaceCurrentStatus()
+    {
+        var workspace = new BlogWorkspaceService(new StubSessionService { Summaries = [CreateSummary("saved")] }, TimeSpan.FromMilliseconds(25));
+        await workspace.ListAsync(true);
+
+        Assert.Equal("1 saved sessions loaded.", workspace.State.CurrentStatus);
+        Assert.Equal(WorkflowOutputOutcome.Success, workspace.State.CurrentStatusOutcome);
+    }
+    [Fact]
     public void NewWorkspace_UsesDefaultWordRange()
     {
         var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
@@ -216,7 +251,7 @@ public sealed class BlogWorkspaceServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_EnablesSelectionOnlyForNonEmptyCurrentList()
+    public async Task ListAsync_LeavesRevisionDisabledWithoutDraft()
     {
         var sessions = new StubSessionService { Summaries = [CreateSummary("one"), CreateSummary("two")] };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
@@ -225,7 +260,7 @@ public sealed class BlogWorkspaceServiceTests
 
         Assert.Equal(WorkspaceMode.List, workspace.State.Mode);
         Assert.True(workspace.State.IsSelectionVisible);
-        Assert.True(workspace.State.IsReviseEnabled);
+        Assert.False(workspace.State.IsReviseEnabled);
         Assert.Equal(2, workspace.State.DisplayedSessions.Count);
     }
 

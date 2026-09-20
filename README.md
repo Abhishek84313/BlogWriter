@@ -19,7 +19,9 @@ Reviewer feedback is kept in Reviewer notes as it arrives and accumulates across
 revisions for the active session; it is cleared when starting New or loading another
 session. In List mode, enter the one-based session number beside List to restore the
 saved MainTask and optional CurrentSubTask and launch it immediately. The `?` command
-shows and copies the HTTPS launch command.
+shows and copies the HTTPS launch command. The Revision request field is editable after
+New, while Revise becomes available once a draft/session exists. Workflow status is
+shown as one latest-message line; Reviewer notes remain separate.
 
 After configuring Microsoft Entra, Foundry, and Cosmos values from
 [docs/configuration.md](docs/configuration.md), start it with:

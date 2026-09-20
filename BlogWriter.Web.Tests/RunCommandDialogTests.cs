@@ -14,6 +14,7 @@ public sealed class RunCommandDialogTests : BunitContext
         IRenderedComponent<RunCommandDialog> cut = Render<RunCommandDialog>();
 
         Assert.Equal(RunCommandDialog.CommandText, cut.Find(".run-command-text").TextContent);
+        Assert.Contains(RunCommandDialog.HttpsPort, cut.Find(".run-command-port").TextContent);
         Assert.Equal("dialog", cut.Find("dialog").GetAttribute("role"));
         Assert.Equal("true", cut.Find("dialog").GetAttribute("aria-modal"));
         Assert.Equal("Copy", cut.Find(".dialog-actions button").TextContent.Trim());

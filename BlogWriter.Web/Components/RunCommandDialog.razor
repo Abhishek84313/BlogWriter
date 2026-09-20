@@ -7,6 +7,7 @@
         <h2 id="run-command-title">Run Blog Writer</h2>
         <p id="run-command-copy">Use this command in the repository terminal:</p>
         <code class="run-command-text">@CommandText</code>
+        <p class="run-command-port">HTTPS port: @HttpsPort</p>
         @if (!string.IsNullOrWhiteSpace(CopyMessage))
         {
             <p class="copy-message" role="status">@CopyMessage</p>
@@ -20,6 +21,7 @@
 
 @code {
     public const string CommandText = "dotnet run --project BlogWriter.Web/BlogWriter.Web.csproj --launch-profile https";
+    public const string HttpsPort = "7056";
 
     private ElementReference _dialog;
     private bool _opened;

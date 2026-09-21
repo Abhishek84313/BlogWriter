@@ -40,6 +40,7 @@ public sealed class HomePageTests : BunitContext
             markup.IndexOf("work-grid", StringComparison.Ordinal));
         Assert.Equal("1000", cut.Find("#min-words").GetAttribute("value"));
         Assert.Equal("2000", cut.Find("#max-words").GetAttribute("value"));
+        Assert.NotNull(cut.Find("button[data-command='go']"));
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public sealed class HomePageTests : BunitContext
         Assert.False(cut.Find("button[data-command='list']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[data-command='quit']").HasAttribute("disabled"));
         Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
-        Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
     }
 
     [Fact]
@@ -131,17 +132,17 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_EnterSubmitsAndShiftEnterDoesNotSubmit()
+    public void Home_OnlyGoSubmitsPromptText()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();
         IRenderedComponent<Home> cut = Render<Home>();
         var prompt = cut.Find("#initial-prompt");
         prompt.Input("topic");
 
-        prompt.KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+        Assert.False(prompt.HasAttribute("onkeydown"));
         Assert.Equal(WorkspaceMode.New, workspace.State.Mode);
 
-        prompt.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("button[data-command='go']").Click();
         cut.WaitForAssertion(() => Assert.Equal(WorkspaceMode.Draft, workspace.State.Mode));
     }
 
@@ -166,13 +167,37 @@ public sealed class HomePageTests : BunitContext
         workspace.State.InitialPrompt = "topic";
 
         cut.Find("#initial-prompt").Input("topic");
-        cut.Find("#initial-prompt").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("button[data-command='go']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("draft", cut.Find("[aria-labelledby='draft-heading']").TextContent);
             Assert.Contains("review", cut.Find("[aria-labelledby='review-heading']").TextContent);
         });
+    }
+
+    [Fact]
+    public void Home_RevisionControlsFollowDisplayedDraft()
+    {
+        BlogWorkspaceService workspace = RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+
+        workspace.State.Draft = "draft";
+        cut.Render();
+
+        Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        Assert.False(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+
+        workspace.State.RevisionPrompt = "preserve this";
+        workspace.State.Draft = "  ";
+        cut.Render();
+
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+        Assert.Equal("preserve this", workspace.State.RevisionPrompt);
     }
 
     private BlogWorkspaceService RegisterWorkspace(IReadOnlyList<BlogSessionSummary>? summaries = null)

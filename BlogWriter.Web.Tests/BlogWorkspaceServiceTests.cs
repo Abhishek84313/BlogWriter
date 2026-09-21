@@ -5,17 +5,31 @@ namespace BlogWriter.Web.Tests;
 public sealed class BlogWorkspaceServiceTests
 {
     [Fact]
-    public async Task NewState_EnablesRevisionInputButNotRevise()
+    public async Task NewState_DisablesRevisionControlsUntilDraftExists()
     {
         var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
 
-        Assert.True(workspace.State.IsRevisionInputEnabled);
+        Assert.False(workspace.State.IsRevisionInputEnabled);
         Assert.False(workspace.State.IsReviseEnabled);
 
         await workspace.NewAsync(true);
 
-        Assert.True(workspace.State.IsRevisionInputEnabled);
+        Assert.False(workspace.State.IsRevisionInputEnabled);
         Assert.False(workspace.State.IsReviseEnabled);
+    }
+
+    [Fact]
+    public void RevisionControls_RequireNonWhitespaceDraftAndNoProcessing()
+    {
+        var state = new BlogWorkspaceState();
+
+        state.Draft = "  ";
+        Assert.False(state.IsRevisionInputEnabled);
+        Assert.False(state.IsReviseEnabled);
+
+        state.Draft = "draft";
+        Assert.True(state.IsRevisionInputEnabled);
+        Assert.True(state.IsReviseEnabled);
     }
 
     [Fact]
@@ -64,6 +78,50 @@ public sealed class BlogWorkspaceServiceTests
         Assert.Equal("review", workspace.State.Review);
         Assert.False(workspace.State.IsProcessing);
         Assert.Equal(1, sessions.StartCalls);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_StartsDraftWhenOnlyInitialPromptExists()
+    {
+        var sessions = new StubSessionService();
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "write about testing";
+
+        await workspace.SubmitAsync();
+
+        Assert.Equal(1, sessions.StartCalls);
+        Assert.Equal(0, sessions.RevisionCalls);
+        Assert.Equal(WorkspaceMode.Draft, workspace.State.Mode);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_PrioritizesRevisionWhenBothPromptsExist()
+    {
+        var sessions = new StubSessionService();
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        workspace.State.InitialPrompt = "topic";
+        await workspace.SubmitInitialAsync();
+        workspace.State.InitialPrompt = "new draft";
+        workspace.State.RevisionPrompt = "make it shorter";
+
+        await workspace.SubmitAsync();
+
+        Assert.Equal(1, sessions.StartCalls);
+        Assert.Equal(1, sessions.RevisionCalls);
+        Assert.Equal("new draft", workspace.State.InitialPrompt);
+        Assert.Empty(workspace.State.RevisionPrompt);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_DoesNotStartWithoutEligibleInput()
+    {
+        var sessions = new StubSessionService();
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+
+        await workspace.SubmitAsync();
+
+        Assert.Equal(0, sessions.StartCalls);
+        Assert.Equal(0, sessions.RevisionCalls);
     }
 
     [Fact]
@@ -474,6 +532,7 @@ public sealed class BlogWorkspaceServiceTests
     private sealed class StubSessionService : IBlogWriterSessionService
     {
         public int StartCalls { get; private set; }
+        public int RevisionCalls { get; private set; }
         public string? LastStartPrompt { get; private set; }
         public int LoadCalls { get; private set; }
         public WordRange? LastStartRange { get; private set; }
@@ -509,6 +568,7 @@ public sealed class BlogWorkspaceServiceTests
             CancellationToken cancellationToken = default,
             IProgress<WorkflowOutputUpdate>? output = null)
         {
+            RevisionCalls++;
             LastOutput = output;
             output?.Report(WorkflowOutputUpdate.Create(
                 WorkflowOutputKind.ReviewerFeedback,

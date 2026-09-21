@@ -82,14 +82,16 @@ dotnet user-secrets --project BlogWriter.Web/BlogWriter.Web.csproj set "Cosmos:C
 `Testing`. It exists for automated browser checks and must never be enabled in a
 development, staging, or production deployment.
 
-### Word-count controls
+### Word-count and submission controls
 
-The web workspace displays `Min` and `Max` between the prompt inputs and the
-Draft/Reviewer panes. They default to 1000 and 2000, accept positive whole numbers,
-and require Max to be at least Min. The values are session state, not configuration
-keys: loading a saved session restores its range, and a successful revision persists
-the updated range. Unsaved range changes participate in the existing New/List/Quit
-discard confirmation.
+The web workspace displays `Min`, `Max`, and `Go` between the prompt inputs and the
+Draft/Reviewer panes. Min and Max default to 1000 and 2000, accept positive whole
+numbers, and require Max to be at least Min. Go is the only control that starts draft
+or revision processing; Enter adds text to a prompt without submitting it. When both
+inputs have text, Go processes the revision request first. The values are session
+state, not configuration keys: loading a saved session restores its range, and a
+successful revision persists the updated range. Unsaved range changes participate in
+the existing New/List/Quit discard confirmation.
 
 ### Workflow log and Reviewer notes
 
@@ -103,10 +105,10 @@ and reviewer history; incremental output is not persisted as a separate record.
 In List mode, the inline three-digit selector uses the displayed one-based position.
 Valid selection restores `MainTask`, restores non-empty `CurrentSubTask` as the Revision
 request, and starts one initial writing operation. The `?` command displays and copies
-the HTTPS launch command. Revision request is disabled whenever Revise is disabled.
-After New, Revision request is editable but Revise remains disabled until a draft or
-session exists. Workflow status is presented as one latest-message line while Reviewer
-notes remain independently visible.
+the HTTPS launch command. Revision request and Revise are disabled until a
+non-whitespace draft is displayed, and remain disabled while processing. Workflow
+status is presented as one latest-message line while Reviewer notes remain independently
+visible.
 
 ## Keeping prompts in sync
 

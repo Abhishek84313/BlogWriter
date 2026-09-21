@@ -36,6 +36,8 @@
             <span id="max-words-error" class="range-error">@MaxError</span>
         }
     </div>
+
+    <button type="button" class="range-go" data-command="go" @onclick="Go">Go</button>
 </section>
 
 @code {
@@ -56,4 +58,7 @@
 
     [Parameter]
     public string? MaxError { get; set; }
+
+    [Parameter]
+    public EventCallback Go { get; set; }
 }

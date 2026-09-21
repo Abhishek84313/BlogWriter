@@ -90,7 +90,7 @@ button, a { touch-action: manipulation; }
 
 .word-range-row {
     display: grid;
-    grid-template-columns: auto minmax(105px, 150px) auto minmax(105px, 150px);
+    grid-template-columns: auto minmax(105px, 150px) auto minmax(105px, 150px) auto;
     align-items: start;
     justify-content: end;
     gap: 8px;
@@ -118,6 +118,17 @@ button, a { touch-action: manipulation; }
 .range-field input[aria-invalid="true"] { border-color: #9d2c20; }
 .range-separator { align-self: end; padding-bottom: 9px; color: var(--muted); font-size: .72rem; }
 .range-error { max-width: 150px; color: #9d2c20; font-size: .68rem; line-height: 1.25; }
+.range-go {
+    align-self: end;
+    min-height: 36px;
+    border: 1px solid var(--forest-dark);
+    padding: 6px 12px;
+    background: var(--forest);
+    color: white;
+    cursor: pointer;
+}
+.range-go:hover:not(:disabled) { background: var(--forest-dark); }
+.range-go:disabled { border-color: var(--line); background: #ecece7; color: var(--muted); cursor: not-allowed; }
 
 .work-grid { min-height: 48vh; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); border: 1px solid var(--ink); }
 .work-pane { min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--surface); }
@@ -180,7 +191,7 @@ button, a { touch-action: manipulation; }
     .app-main { padding: 18px 14px 24px; }
     .workspace-intro { align-items: start; flex-direction: column; gap: 8px; }
     .prompt-strip, .work-grid { grid-template-columns: 1fr; }
-    .word-range-row { grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); justify-content: stretch; }
+    .word-range-row { grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto; justify-content: stretch; }
     .range-heading { grid-column: 1 / -1; }
     .work-pane + .work-pane { border-left: 0; border-top: 1px solid var(--ink); }
     .work-grid { min-height: 0; }

@@ -23,6 +23,21 @@ public sealed class BlogWorkspaceService : IDisposable
 
     public event Action? Changed;
 
+    public Task SubmitAsync()
+    {
+        if (State.IsRevisionInputEnabled && !string.IsNullOrWhiteSpace(State.RevisionPrompt))
+        {
+            return SubmitRevisionAsync();
+        }
+
+        if (!string.IsNullOrWhiteSpace(State.InitialPrompt))
+        {
+            return SubmitInitialAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task SubmitInitialAsync()
     {
         if (!TryCaptureRange(out WordRange range))

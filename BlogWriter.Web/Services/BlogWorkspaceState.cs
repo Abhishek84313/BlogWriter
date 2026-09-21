@@ -79,8 +79,8 @@ public sealed class BlogWorkspaceState
 
     public bool IsSelectionVisible => Mode == WorkspaceMode.List;
     public bool HasDraft => !string.IsNullOrWhiteSpace(Draft);
-    public bool IsRevisionInputEnabled => !IsProcessing && (Mode == WorkspaceMode.New || HasDraft || ActiveSession is not null);
-    public bool IsReviseEnabled => !IsProcessing && (HasDraft || ActiveSession is not null);
+    public bool IsRevisionInputEnabled => !IsProcessing && HasDraft;
+    public bool IsReviseEnabled => !IsProcessing && HasDraft;
     public bool HasUnsavedRange
     {
         get

@@ -86,6 +86,19 @@ public sealed class BlogWorkspaceService : IDisposable
             clearInput: () => State.RevisionPrompt = "");
     }
 
+    public void BeginRevision()
+    {
+        if (!State.IsReviseEnabled)
+        {
+            return;
+        }
+
+        State.RevisionPrompt = "";
+        State.IsRevisionRequested = true;
+        State.ValidationMessage = null;
+        NotifyChanged();
+    }
+
     public void UpdateMinWords(string value)
     {
         State.MinWordsInput = value;
@@ -428,6 +441,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.Mode = mode;
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
+        State.IsRevisionRequested = false;
         SetAcceptedAndVisibleRange(WordRange.Default);
         State.Draft = "";
         State.Review = "";

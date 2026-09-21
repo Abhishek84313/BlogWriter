@@ -79,7 +79,14 @@ public sealed class BlogWorkspaceState
 
     public bool IsSelectionVisible => Mode == WorkspaceMode.List;
     public bool HasDraft => !string.IsNullOrWhiteSpace(Draft);
-    public bool IsRevisionInputEnabled => !IsProcessing && HasDraft;
+
+    /// <summary>
+    /// Latched by pressing Revise and cleared only by New. The revision field stays
+    /// usable across later drafts once the reviser has opted in.
+    /// </summary>
+    public bool IsRevisionRequested { get; internal set; }
+
+    public bool IsRevisionInputEnabled => !IsProcessing && IsRevisionRequested;
     public bool IsReviseEnabled => !IsProcessing && HasDraft;
     public bool HasUnsavedRange
     {

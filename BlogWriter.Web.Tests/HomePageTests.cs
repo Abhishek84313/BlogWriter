@@ -188,16 +188,38 @@ public sealed class HomePageTests : BunitContext
         workspace.State.Draft = "draft";
         cut.Render();
 
-        Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        // A draft enables Revise, but the field waits for the button press.
         Assert.False(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
 
-        workspace.State.RevisionPrompt = "preserve this";
+        cut.Find("button[data-command='revise']").Click();
+
+        Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+
         workspace.State.Draft = "  ";
         cut.Render();
 
-        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
         Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
-        Assert.Equal("preserve this", workspace.State.RevisionPrompt);
+    }
+
+    [Fact]
+    public void Home_ReviseClearsRevisionFieldAndNewDisablesItAgain()
+    {
+        BlogWorkspaceService workspace = RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+
+        workspace.State.Draft = "draft";
+        workspace.State.RevisionPrompt = "stale text";
+        cut.Render();
+
+        cut.Find("button[data-command='revise']").Click();
+
+        Assert.Empty(workspace.State.RevisionPrompt);
+        Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+
+        cut.Find("button[data-command='new']").Click();
+
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
     }
 
     private BlogWorkspaceService RegisterWorkspace(IReadOnlyList<BlogSessionSummary>? summaries = null)

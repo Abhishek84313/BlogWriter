@@ -293,6 +293,7 @@ public sealed class BlogWorkspaceService : IDisposable
         _operationCancellation = cancellation;
         State.IsProcessing = true;
         State.ValidationMessage = null;
+        State.Draft = "";
         State.StatusMessage = "Writing in progress...";
         State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
         NotifyChanged();

@@ -25,9 +25,12 @@ public sealed class BlogWorkspaceService : IDisposable
 
     public Task SubmitAsync()
     {
-        if (State.IsRevisionInputEnabled && !string.IsNullOrWhiteSpace(State.RevisionPrompt))
+        // While revising, the writing prompt is locked, so only the revision can be submitted.
+        if (State.IsRevisionRequested)
         {
-            return SubmitRevisionAsync();
+            return string.IsNullOrWhiteSpace(State.RevisionPrompt)
+                ? Task.CompletedTask
+                : SubmitRevisionAsync();
         }
 
         if (!string.IsNullOrWhiteSpace(State.InitialPrompt))
@@ -54,8 +57,7 @@ public sealed class BlogWorkspaceService : IDisposable
                 range.Min,
                 range.Max,
                 cancellationToken,
-                output),
-            clearInput: () => State.InitialPrompt = "");
+                output));
     }
 
     public Task SubmitRevisionAsync()
@@ -82,8 +84,7 @@ public sealed class BlogWorkspaceService : IDisposable
                 range.Min,
                 range.Max,
                 cancellationToken,
-                output),
-            clearInput: () => State.RevisionPrompt = "");
+                output));
     }
 
     public void UpdateMinWords(string value)
@@ -121,6 +122,7 @@ public sealed class BlogWorkspaceService : IDisposable
         RestoreAcceptedRange();
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
+        State.MarkPromptsSubmitted();
         State.SelectionInput = "";
         State.SelectionError = null;
         State.ValidationMessage = null;
@@ -255,8 +257,7 @@ public sealed class BlogWorkspaceService : IDisposable
     private async Task RunSessionOperationAsync(
         string input,
         WordRange submittedRange,
-        Func<CancellationToken, IProgress<WorkflowOutputUpdate>, Task<BlogSession>> operation,
-        Action clearInput)
+        Func<CancellationToken, IProgress<WorkflowOutputUpdate>, Task<BlogSession>> operation)
     {
         if (State.Mode == WorkspaceMode.Ended)
         {
@@ -297,7 +298,7 @@ public sealed class BlogWorkspaceService : IDisposable
                 return;
             }
 
-            clearInput();
+            State.MarkPromptsSubmitted();
             Publish(session, submittedRange);
             State.StatusMessage = "Writing complete.";
             State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Success);
@@ -430,6 +431,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.Mode = mode;
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
+        State.MarkPromptsSubmitted();
         State.IsRevisionRequested = false;
         SetAcceptedAndVisibleRange(WordRange.Default);
         State.Draft = "";

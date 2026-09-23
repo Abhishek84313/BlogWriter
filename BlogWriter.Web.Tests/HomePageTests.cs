@@ -202,6 +202,32 @@ public sealed class HomePageTests : BunitContext
         Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
     }
 
+    [Fact]
+    public void Home_WritingPromptKeepsTextAndLocksWhileRevisingUntilNew()
+    {
+        BlogWorkspaceService workspace = RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+        Assert.False(cut.Find("#initial-prompt").HasAttribute("disabled"));
+
+        cut.Find("#initial-prompt").Input("topic");
+        cut.Find("button[data-command='go']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("topic", cut.Find("#initial-prompt").GetAttribute("value"));
+            Assert.True(cut.Find("#initial-prompt").HasAttribute("disabled"));
+            Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        });
+
+        cut.Find("button[data-command='new']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("#initial-prompt").HasAttribute("disabled"));
+            Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        });
+    }
+
     private BlogWorkspaceService RegisterWorkspace(IReadOnlyList<BlogSessionSummary>? summaries = null)
     {
         var sessions = new StubSessionService { Summaries = summaries ?? [] };

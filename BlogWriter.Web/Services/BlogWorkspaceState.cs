@@ -100,6 +100,19 @@ public sealed class BlogWorkspaceState
     public bool IsRevisionRequested { get; internal set; }
 
     public bool IsRevisionInputEnabled => !IsProcessing && IsRevisionRequested;
+
+    /// <summary>
+    /// The writing prompt is locked while revising; New unlocks it again.
+    /// </summary>
+    public bool IsInitialPromptEnabled => !IsProcessing && !IsRevisionRequested;
+
+    /// <summary>
+    /// Prompt text as last accepted by a completed writing operation. Prompts keep their
+    /// text after Go, so only text that differs from these counts as unsaved.
+    /// </summary>
+    internal string SubmittedInitialPrompt { get; set; } = "";
+    internal string SubmittedRevisionPrompt { get; set; } = "";
+
     public bool HasUnsavedRange
     {
         get
@@ -110,7 +123,16 @@ public sealed class BlogWorkspaceState
     }
 
     public bool HasUnsavedText =>
-        !string.IsNullOrWhiteSpace(InitialPrompt) ||
-        !string.IsNullOrWhiteSpace(RevisionPrompt) ||
+        IsUnsaved(InitialPrompt, SubmittedInitialPrompt) ||
+        IsUnsaved(RevisionPrompt, SubmittedRevisionPrompt) ||
         HasUnsavedRange;
+
+    internal void MarkPromptsSubmitted()
+    {
+        SubmittedInitialPrompt = InitialPrompt;
+        SubmittedRevisionPrompt = RevisionPrompt;
+    }
+
+    private static bool IsUnsaved(string prompt, string submitted) =>
+        !string.IsNullOrWhiteSpace(prompt) && !string.Equals(prompt, submitted, StringComparison.Ordinal);
 }

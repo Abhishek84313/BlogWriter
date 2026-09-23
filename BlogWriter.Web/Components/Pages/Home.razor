@@ -31,7 +31,7 @@
                          Label="New writing prompt"
                          Value="@Workspace.State.InitialPrompt"
                          ValueChanged="value => Workspace.State.InitialPrompt = value"
-                         Disabled="@Workspace.State.IsProcessing" />
+                         Disabled="@(!Workspace.State.IsInitialPromptEnabled)" />
             <PromptInput Id="revision-prompt"
                          Label="Revision request"
                          Value="@Workspace.State.RevisionPrompt"

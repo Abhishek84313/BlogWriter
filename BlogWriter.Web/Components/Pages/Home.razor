@@ -43,9 +43,8 @@
                 MaxValue="@Workspace.State.MaxWordsInput"
                 MaxValueChanged="Workspace.UpdateMaxWords"
                 MinError="@Workspace.State.MinWordsError"
-                MaxError="@Workspace.State.MaxWordsError"
-                Go="Workspace.SubmitAsync" />
-
+                MaxError="@Workspace.State.MaxWordsError"/>
+ 
         <section class="work-grid">
             @if (Workspace.State.Mode == WorkspaceMode.List)
             {
@@ -74,6 +73,7 @@
                         SelectionVisible="@Workspace.State.IsSelectionVisible"
                         SelectionInput="@Workspace.State.SelectionInput"
                         SelectionError="@Workspace.State.SelectionError"
+                        Go="Workspace.SubmitAsync"
                         Quit="() => RequestTransitionAsync(PendingAction.Quit)"
                         Help="ShowHelp" />
 

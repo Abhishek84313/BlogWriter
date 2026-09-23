@@ -12,8 +12,7 @@ public sealed class CommandBarTests : BunitContext
     {
         IRenderedComponent<CommandBar> cut = Render<CommandBar>(parameters => parameters
             .Add(component => component.SelectionVisible, true)
-            .Add(component => component.SelectionInput, "12")
-            .Add(component => component.ReviseEnabled, true));
+            .Add(component => component.SelectionInput, "12"));
 
         Assert.Equal("12", cut.Find("#command-session-number").GetAttribute("value"));
         Assert.Equal("3", cut.Find("#command-session-number").GetAttribute("maxlength"));

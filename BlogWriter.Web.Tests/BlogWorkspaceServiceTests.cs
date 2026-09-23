@@ -5,76 +5,48 @@ namespace BlogWriter.Web.Tests;
 public sealed class BlogWorkspaceServiceTests
 {
     [Fact]
-    public async Task NewState_DisablesRevisionControlsUntilDraftExists()
+    public async Task NewState_DisablesRevisionInputUntilDraftExists()
     {
         var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
 
         Assert.False(workspace.State.IsRevisionInputEnabled);
-        Assert.False(workspace.State.IsReviseEnabled);
 
         await workspace.NewAsync(true);
 
         Assert.False(workspace.State.IsRevisionInputEnabled);
-        Assert.False(workspace.State.IsReviseEnabled);
     }
 
     [Fact]
-    public void ReviseButton_RequiresNonWhitespaceDraftAndNoProcessing()
+    public void RevisionInput_EnablesOnceDraftHasText()
     {
         var state = new BlogWorkspaceState();
 
         state.Draft = "  ";
-        Assert.False(state.IsReviseEnabled);
+        Assert.False(state.IsRevisionInputEnabled);
 
         state.Draft = "draft";
-        Assert.True(state.IsReviseEnabled);
+        Assert.True(state.IsRevisionInputEnabled);
     }
 
     [Fact]
-    public void RevisionInput_StaysDisabledUntilReviseIsPressed()
+    public void RevisionInput_StaysEnabledWhenDraftIsCleared()
     {
         var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
         workspace.State.Draft = "draft";
 
-        Assert.True(workspace.State.IsReviseEnabled);
-        Assert.False(workspace.State.IsRevisionInputEnabled);
-
-        workspace.BeginRevision();
+        workspace.State.Draft = "";
 
         Assert.True(workspace.State.IsRevisionInputEnabled);
     }
 
     [Fact]
-    public void BeginRevision_ClearsRevisionFieldAndEnablesIt()
+    public async Task RevisionInput_EnablesWhenListItemIsSelected()
     {
-        var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
-        workspace.State.Draft = "draft";
-        workspace.State.RevisionPrompt = "stale text";
+        var sessions = new StubSessionService { Summaries = [CreateSummary("one")] };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        await workspace.ListAsync(discardConfirmed: false);
 
-        workspace.BeginRevision();
-
-        Assert.Empty(workspace.State.RevisionPrompt);
-        Assert.True(workspace.State.IsRevisionInputEnabled);
-    }
-
-    [Fact]
-    public void BeginRevision_IsIgnoredWithoutDraft()
-    {
-        var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
-
-        workspace.BeginRevision();
-
-        Assert.False(workspace.State.IsRevisionInputEnabled);
-    }
-
-    [Fact]
-    public void RevisionInput_StaysEnabledAcrossLaterDrafts()
-    {
-        var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
-        workspace.State.Draft = "draft";
-        workspace.BeginRevision();
-
-        workspace.State.Draft = "a revised draft";
+        await workspace.LaunchSelectionAsync("1");
 
         Assert.True(workspace.State.IsRevisionInputEnabled);
     }
@@ -84,7 +56,6 @@ public sealed class BlogWorkspaceServiceTests
     {
         var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
         workspace.State.Draft = "draft";
-        workspace.BeginRevision();
 
         await workspace.NewAsync(discardConfirmed: true);
 
@@ -92,15 +63,14 @@ public sealed class BlogWorkspaceServiceTests
     }
 
     [Fact]
-    public async Task DraftState_EnablesReviseButtonOnly()
+    public async Task DraftState_EnablesRevisionInput()
     {
         var workspace = new BlogWorkspaceService(new StubSessionService(), TimeSpan.FromMilliseconds(25));
         workspace.State.InitialPrompt = "topic";
 
         await workspace.SubmitInitialAsync();
 
-        Assert.True(workspace.State.IsReviseEnabled);
-        Assert.False(workspace.State.IsRevisionInputEnabled);
+        Assert.True(workspace.State.IsRevisionInputEnabled);
     }
 
     [Fact]
@@ -160,7 +130,6 @@ public sealed class BlogWorkspaceServiceTests
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         workspace.State.InitialPrompt = "topic";
         await workspace.SubmitInitialAsync();
-        workspace.BeginRevision();
         workspace.State.InitialPrompt = "new draft";
         workspace.State.RevisionPrompt = "make it shorter";
 
@@ -378,7 +347,7 @@ public sealed class BlogWorkspaceServiceTests
 
         Assert.Equal(WorkspaceMode.List, workspace.State.Mode);
         Assert.True(workspace.State.IsSelectionVisible);
-        Assert.False(workspace.State.IsReviseEnabled);
+        Assert.False(workspace.State.IsRevisionInputEnabled);
         Assert.Equal(2, workspace.State.DisplayedSessions.Count);
     }
 

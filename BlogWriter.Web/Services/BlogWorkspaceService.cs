@@ -86,19 +86,6 @@ public sealed class BlogWorkspaceService : IDisposable
             clearInput: () => State.RevisionPrompt = "");
     }
 
-    public void BeginRevision()
-    {
-        if (!State.IsReviseEnabled)
-        {
-            return;
-        }
-
-        State.RevisionPrompt = "";
-        State.IsRevisionRequested = true;
-        State.ValidationMessage = null;
-        NotifyChanged();
-    }
-
     public void UpdateMinWords(string value)
     {
         State.MinWordsInput = value;
@@ -227,6 +214,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.ReviewerUpdateKeys.Clear();
         State.InitialPrompt = session.State.MainTask;
         State.RevisionPrompt = session.State.CurrentSubTask;
+        State.IsRevisionRequested = true;
         State.ActiveSession = null;
         State.SelectionError = null;
         State.ValidationMessage = null;

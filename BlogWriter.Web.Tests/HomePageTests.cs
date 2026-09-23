@@ -11,7 +11,7 @@ public sealed class HomePageTests : BunitContext
     public HomePageTests() => JSInterop.Mode = JSRuntimeMode.Loose;
 
     [Fact]
-    public void Home_RendersWritingWorkspaceAndFiveCommands()
+    public void Home_RendersWritingWorkspaceAndFourCommands()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();
 
@@ -21,9 +21,9 @@ public sealed class HomePageTests : BunitContext
         Assert.NotNull(cut.Find("#revision-prompt"));
         Assert.NotNull(cut.Find("[aria-labelledby='draft-heading']"));
         Assert.NotNull(cut.Find("[aria-labelledby='review-heading']"));
-        Assert.Equal(["New", "List", "Revise", "Quit", "?"],
+        Assert.Equal(["New", "List", "Quit", "?"],
             cut.FindAll(".command-bar button").Select(button => button.TextContent.Trim()).ToArray());
-        Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
         Assert.False(workspace.State.IsSelectionVisible);
     }
 
@@ -44,7 +44,7 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_ShowsNumberInputAndEnablesReviseForNonEmptyList()
+    public void Home_ShowsNumberInputAndKeepsRevisionDisabledForUnselectedList()
     {
         BlogWorkspaceService workspace = RegisterWorkspace([
             new BlogSessionSummary(Guid.NewGuid().ToString("N"), "first topic", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
@@ -55,7 +55,6 @@ public sealed class HomePageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(cut.Find("#command-session-number"));
-            Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
             Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
             Assert.Contains("[1]", cut.Find(".session-list").TextContent);
         });
@@ -81,7 +80,7 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_KeepsNewListAndQuitEnabledWhileReviseIsConditional()
+    public void Home_KeepsNewListAndQuitEnabledWhileRevisionIsConditional()
     {
         RegisterWorkspace();
         IRenderedComponent<Home> cut = Render<Home>();
@@ -89,7 +88,7 @@ public sealed class HomePageTests : BunitContext
         Assert.False(cut.Find("button[data-command='new']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[data-command='list']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[data-command='quit']").HasAttribute("disabled"));
-        Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
+        Assert.Empty(cut.FindAll("button[data-command='revise']"));
         Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
     }
 
@@ -156,7 +155,11 @@ public sealed class HomePageTests : BunitContext
         cut.Find("button[data-command='list']").Click();
         cut.WaitForElement("#command-session-number").Change("1");
 
-        cut.WaitForAssertion(() => Assert.Equal("draft", workspace.State.Draft));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("draft", workspace.State.Draft);
+            Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+        });
     }
 
     [Fact]
@@ -177,44 +180,21 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_RevisionControlsFollowDisplayedDraft()
+    public void Home_RevisionFieldLatchesOnDraftUntilNew()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();
         IRenderedComponent<Home> cut = Render<Home>();
 
         Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
-        Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
 
         workspace.State.Draft = "draft";
         cut.Render();
-
-        // A draft enables Revise, but the field waits for the button press.
-        Assert.False(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
-        Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
-
-        cut.Find("button[data-command='revise']").Click();
 
         Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
 
         workspace.State.Draft = "  ";
         cut.Render();
 
-        Assert.True(cut.Find("button[data-command='revise']").HasAttribute("disabled"));
-    }
-
-    [Fact]
-    public void Home_ReviseClearsRevisionFieldAndNewDisablesItAgain()
-    {
-        BlogWorkspaceService workspace = RegisterWorkspace();
-        IRenderedComponent<Home> cut = Render<Home>();
-
-        workspace.State.Draft = "draft";
-        workspace.State.RevisionPrompt = "stale text";
-        cut.Render();
-
-        cut.Find("button[data-command='revise']").Click();
-
-        Assert.Empty(workspace.State.RevisionPrompt);
         Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
 
         cut.Find("button[data-command='new']").Click();

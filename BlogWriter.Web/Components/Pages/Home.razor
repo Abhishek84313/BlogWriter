@@ -12,14 +12,13 @@
             <p class="eyebrow">Editorial workspace</p>
             <h1>Write. Review. Refine.</h1>
         </div>
-        <p class="workspace-summary">A focused desk for shaping researched drafts with your reviewer.</p>
+        <p class="workspace-summary">A researcher and author for blog pages.</p>
     </header>
 
     @if (Workspace.State.Mode == WorkspaceMode.Ended)
     {
         <section class="ended-state" aria-labelledby="ended-heading">
-            <p class="eyebrow">Session closed</p>
-            <h2 id="ended-heading">Your workspace has ended.</h2>
+            <p class="eyebrow">Session closed</p>            
             <p>Refresh the page when you are ready to begin another session.</p>
         </section>
     }
@@ -28,7 +27,7 @@
         <section class="prompt-strip" aria-label="Writing prompts">
             <PromptInput @ref="_initialPrompt"
                          Id="initial-prompt"
-                         Label="New writing prompt"
+                         Label="New query"
                          Value="@Workspace.State.InitialPrompt"
                          ValueChanged="value => Workspace.State.InitialPrompt = value"
                          Disabled="@(!Workspace.State.IsInitialPromptEnabled)" />

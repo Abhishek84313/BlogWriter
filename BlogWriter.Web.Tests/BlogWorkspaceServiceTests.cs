@@ -2,8 +2,30 @@ using BlogWriter.Web.Services;
 
 namespace BlogWriter.Web.Tests;
 
-public sealed class BlogWorkspaceServiceTests
+public sealed class BlogWorkspaceServiceTests : IDisposable
 {
+    private readonly SynchronizationContext? _previousSynchronizationContext = SynchronizationContext.Current;
+
+    public BlogWorkspaceServiceTests() =>
+        // BlogWorkspaceService reports progress via IProgress<T>, which posts to
+        // SynchronizationContext.Current. Without an ambient context (the default
+        // under xUnit), Progress<T> falls back to ThreadPool.QueueUserWorkItem,
+        // which races with the synchronous continuation after each awaited
+        // operation and can append reviewer feedback out of order. Installing an
+        // immediate, single-threaded context here makes that ordering
+        // deterministic for every test in this class, matching how a Blazor
+        // Server circuit's single-threaded dispatcher behaves in production.
+        SynchronizationContext.SetSynchronizationContext(new ImmediateSynchronizationContext());
+
+    public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previousSynchronizationContext);
+
+    private sealed class ImmediateSynchronizationContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback d, object? state) => d(state);
+
+        public override void Send(SendOrPostCallback d, object? state) => d(state);
+    }
+
     [Fact]
     public async Task NewState_DisablesRevisionInputUntilDraftExists()
     {

@@ -11,7 +11,7 @@ public sealed class HomePageTests : BunitContext
     public HomePageTests() => JSInterop.Mode = JSRuntimeMode.Loose;
 
     [Fact]
-    public void Home_RendersWritingWorkspaceAndFourCommands()
+    public void Home_RendersWritingWorkspaceAndFiveCommands()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();
 
@@ -21,7 +21,7 @@ public sealed class HomePageTests : BunitContext
         Assert.NotNull(cut.Find("#revision-prompt"));
         Assert.NotNull(cut.Find("[aria-labelledby='draft-heading']"));
         Assert.NotNull(cut.Find("[aria-labelledby='review-heading']"));
-        Assert.Equal(["New", "List", "Quit", "?"],
+        Assert.Equal(["New", "List", "Go", "Quit", "?"],
             cut.FindAll(".command-bar button").Select(button => button.TextContent.Trim()).ToArray());
         Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
         Assert.False(workspace.State.IsSelectionVisible);
@@ -98,7 +98,7 @@ public sealed class HomePageTests : BunitContext
         RegisterWorkspace();
         IRenderedComponent<Home> cut = Render<Home>();
 
-        Assert.Equal("New writing prompt", cut.Find("label[for='initial-prompt']").TextContent.Trim());
+        Assert.Equal("New query", cut.Find("label[for='initial-prompt']").TextContent.Trim());
         Assert.Equal("Revision request", cut.Find("label[for='revision-prompt']").TextContent.Trim());
         Assert.NotNull(cut.Find("nav[aria-label='Workspace commands']"));
         Assert.NotNull(cut.Find("[aria-live='polite']"));

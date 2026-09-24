@@ -128,7 +128,9 @@ button, a { touch-action: manipulation; }
     cursor: pointer;
 }
 .range-go:hover:not(:disabled) { background: var(--forest-dark); }
+.range-go:active:not(:disabled) { background: var(--forest-dark); }
 .range-go:disabled { border-color: var(--line); background: #ecece7; color: var(--muted); cursor: not-allowed; }
+.range-go:active:disabled { background: #ecece7; }
 
 .work-grid { min-height: 32vh; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); border: 1px solid var(--ink); }
 .work-pane { min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--surface); }

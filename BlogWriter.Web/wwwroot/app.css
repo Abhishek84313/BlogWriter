@@ -8,7 +8,10 @@
     --line: #cbd0c9;
     --forest: #1e5a46;
     --forest-dark: #123d30;
+    --forest-deep: #0a261d;
     --coral: #b83f30;
+    --coral-dark: #8b2b20;
+    --coral-deep: #661d15;
     --focus: #006fb9;
 }
 
@@ -128,6 +131,7 @@ button, a { touch-action: manipulation; }
     cursor: pointer;
 }
 .range-go:hover:not(:disabled) { background: var(--forest-dark); }
+.range-go:active:not(:disabled) { background: var(--forest-deep); }
 .range-go:disabled { border-color: var(--line); background: #ecece7; color: var(--muted); cursor: not-allowed; }
 
 .work-grid { min-height: 32vh; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); border: 1px solid var(--ink); }
@@ -163,8 +167,14 @@ button, a { touch-action: manipulation; }
     text-decoration: none;
 }
 .command-bar button:hover:not(:disabled), .dialog-actions button:hover { background: var(--forest); color: white; }
-.command-bar button:disabled { border-color: var(--line); color: #8a918c; cursor: not-allowed; }
-.danger-command { border-color: var(--coral) !important; color: #8b2b20 !important; }
+.command-bar button[data-command="new"], .command-bar button[data-command="quit"] { border-color: var(--coral-dark); background: var(--coral); color: white; }
+.command-bar button[data-command="new"]:hover:not(:disabled), .command-bar button[data-command="quit"]:hover:not(:disabled) { background: var(--coral-dark); }
+.command-bar button[data-command="new"]:active:not(:disabled), .command-bar button[data-command="quit"]:active:not(:disabled) { background: var(--coral-deep); }
+.command-bar button[data-command="list"], .command-bar button[data-command="help"] { border-color: var(--forest-dark); background: var(--forest); color: white; }
+.command-bar button[data-command="list"]:hover:not(:disabled), .command-bar button[data-command="help"]:hover:not(:disabled) { background: var(--forest-dark); }
+.command-bar button[data-command="list"]:active:not(:disabled), .command-bar button[data-command="help"]:active:not(:disabled) { background: var(--forest-deep); }
+.command-bar button:disabled { border-color: var(--line); background: #ecece7; color: #8a918c; cursor: not-allowed; }
+.danger-command { border-color: var(--coral) !important; color: var(--coral-dark) !important; }
 
 .session-selector { width: 150px; grid-column: 2; grid-row: 1 / span 2; display: grid; align-self: end; gap: 5px; }
 .session-selector input { width: 100%; min-height: 36px; border: 1px solid var(--ink); padding: 6px 9px; background: white; }

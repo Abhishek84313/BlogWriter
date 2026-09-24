@@ -20,7 +20,7 @@
             }
         }
     </div>
-    <button type="button" data-command="revise" @onclick="Revise" disabled="@(!ReviseEnabled)">Revise</button>
+    <button type="button" class="range-go" data-command="go" @onclick="Go">Go</button>
     <button type="button" data-command="quit" @onclick="Quit">Quit</button>
     <button type="button" class="help-command" data-command="help" aria-label="Help" @onclick="Help">?</button>
 </nav>
@@ -45,16 +45,13 @@
     public string? SelectionError { get; set; }
 
     [Parameter]
-    public EventCallback Revise { get; set; }
-
-    [Parameter]
     public EventCallback Quit { get; set; }
 
     [Parameter]
     public EventCallback Help { get; set; }
 
     [Parameter]
-    public bool ReviseEnabled { get; set; }
+    public EventCallback Go { get; set; }
 
     private Task HandleSelectionChanged(ChangeEventArgs args) =>
         SelectionChanged.InvokeAsync(args.Value?.ToString() ?? "");

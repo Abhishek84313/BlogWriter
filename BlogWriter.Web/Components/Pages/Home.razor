@@ -12,14 +12,13 @@
             <p class="eyebrow">Editorial workspace</p>
             <h1>Write. Review. Refine.</h1>
         </div>
-        <p class="workspace-summary">A focused desk for shaping researched drafts with your reviewer.</p>
+        <p class="workspace-summary">A researcher and author for blog pages.</p>
     </header>
 
     @if (Workspace.State.Mode == WorkspaceMode.Ended)
     {
         <section class="ended-state" aria-labelledby="ended-heading">
-            <p class="eyebrow">Session closed</p>
-            <h2 id="ended-heading">Your workspace has ended.</h2>
+            <p class="eyebrow">Session closed</p>            
             <p>Refresh the page when you are ready to begin another session.</p>
         </section>
     }
@@ -28,12 +27,11 @@
         <section class="prompt-strip" aria-label="Writing prompts">
             <PromptInput @ref="_initialPrompt"
                          Id="initial-prompt"
-                         Label="New writing prompt"
+                         Label="New query"
                          Value="@Workspace.State.InitialPrompt"
                          ValueChanged="value => Workspace.State.InitialPrompt = value"
-                         Disabled="@Workspace.State.IsProcessing" />
-            <PromptInput @ref="_revisionPrompt"
-                         Id="revision-prompt"
+                         Disabled="@(!Workspace.State.IsInitialPromptEnabled)" />
+            <PromptInput Id="revision-prompt"
                          Label="Revision request"
                          Value="@Workspace.State.RevisionPrompt"
                          ValueChanged="value => Workspace.State.RevisionPrompt = value"
@@ -45,9 +43,8 @@
                 MaxValue="@Workspace.State.MaxWordsInput"
                 MaxValueChanged="Workspace.UpdateMaxWords"
                 MinError="@Workspace.State.MinWordsError"
-                MaxError="@Workspace.State.MaxWordsError"
-                Go="Workspace.SubmitAsync" />
-
+                MaxError="@Workspace.State.MaxWordsError"/>
+ 
         <section class="work-grid">
             @if (Workspace.State.Mode == WorkspaceMode.List)
             {
@@ -76,10 +73,9 @@
                         SelectionVisible="@Workspace.State.IsSelectionVisible"
                         SelectionInput="@Workspace.State.SelectionInput"
                         SelectionError="@Workspace.State.SelectionError"
-                        Revise="BeginRevisionAsync"
+                        Go="Workspace.SubmitAsync"
                         Quit="() => RequestTransitionAsync(PendingAction.Quit)"
-                        Help="ShowHelp"
-                        ReviseEnabled="@Workspace.State.IsReviseEnabled" />
+                        Help="ShowHelp" />
 
             <WorkflowLog CurrentStatus="@Workspace.State.CurrentStatus"
                          CurrentStatusOutcome="@Workspace.State.CurrentStatusOutcome" />
@@ -101,7 +97,6 @@
 
 @code {
     private PromptInput? _initialPrompt;
-    private PromptInput? _revisionPrompt;
     private PendingAction _pendingAction;
     private bool _showDiscardDialog;
     private bool _showHelpDialog;
@@ -140,15 +135,6 @@
     {
         _showDiscardDialog = false;
         _pendingAction = PendingAction.None;
-    }
-
-    private async Task BeginRevisionAsync()
-    {
-        Workspace.BeginRevision();
-        if (Workspace.State.IsRevisionInputEnabled && _revisionPrompt is not null)
-        {
-            await _revisionPrompt.FocusAsync();
-        }
     }
 
     private void ShowHelp() => _showHelpDialog = true;

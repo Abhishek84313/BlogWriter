@@ -99,3 +99,6 @@ We are seeing a lot of calls to the LLM. Either there is a problem with the call
 
 * The `Microsoft.Agents.AI.Foundry.Hosting` package used by `HostedAgents/*` is still prerelease — re-validate before production use.
 * Decide whether the Researcher's hosted agent should also expose the Responses+Invocations combo, or add more Foundry Toolbox tools (Code Interpreter, Azure AI Search) now that it's hosted.
+
+## Contributing
+Please read Contributing.md before contributing. Thank you.

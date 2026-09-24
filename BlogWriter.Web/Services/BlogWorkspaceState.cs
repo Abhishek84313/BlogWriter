@@ -26,7 +26,20 @@ public sealed class BlogWorkspaceState
     public WordRange AcceptedRange { get; internal set; } = WordRange.Default;
     public string? MinWordsError { get; internal set; }
     public string? MaxWordsError { get; internal set; }
-    public string Draft { get; set; } = "";
+    public string Draft
+    {
+        get => _draft;
+        set
+        {
+            _draft = value;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                IsRevisionRequested = true;
+            }
+        }
+    }
+
+    private string _draft = "";
     public string Review { get; set; } = "";
     public BlogSession? ActiveSession { get; internal set; }
     public IReadOnlyList<BlogSessionSummary> DisplayedSessions { get; internal set; } = [];
@@ -81,13 +94,25 @@ public sealed class BlogWorkspaceState
     public bool HasDraft => !string.IsNullOrWhiteSpace(Draft);
 
     /// <summary>
-    /// Latched by pressing Revise and cleared only by New. The revision field stays
-    /// usable across later drafts once the reviser has opted in.
+    /// Latched once the draft window has text or a saved session is selected, and
+    /// cleared only by New. The revision field stays usable across later drafts.
     /// </summary>
     public bool IsRevisionRequested { get; internal set; }
 
     public bool IsRevisionInputEnabled => !IsProcessing && IsRevisionRequested;
-    public bool IsReviseEnabled => !IsProcessing && HasDraft;
+
+    /// <summary>
+    /// The writing prompt is locked while revising; New unlocks it again.
+    /// </summary>
+    public bool IsInitialPromptEnabled => !IsProcessing && !IsRevisionRequested;
+
+    /// <summary>
+    /// Prompt text as last accepted by a completed writing operation. Prompts keep their
+    /// text after Go, so only text that differs from these counts as unsaved.
+    /// </summary>
+    internal string SubmittedInitialPrompt { get; set; } = "";
+    internal string SubmittedRevisionPrompt { get; set; } = "";
+
     public bool HasUnsavedRange
     {
         get
@@ -98,7 +123,16 @@ public sealed class BlogWorkspaceState
     }
 
     public bool HasUnsavedText =>
-        !string.IsNullOrWhiteSpace(InitialPrompt) ||
-        !string.IsNullOrWhiteSpace(RevisionPrompt) ||
+        IsUnsaved(InitialPrompt, SubmittedInitialPrompt) ||
+        IsUnsaved(RevisionPrompt, SubmittedRevisionPrompt) ||
         HasUnsavedRange;
+
+    internal void MarkPromptsSubmitted()
+    {
+        SubmittedInitialPrompt = InitialPrompt;
+        SubmittedRevisionPrompt = RevisionPrompt;
+    }
+
+    private static bool IsUnsaved(string prompt, string submitted) =>
+        !string.IsNullOrWhiteSpace(prompt) && !string.Equals(prompt, submitted, StringComparison.Ordinal);
 }

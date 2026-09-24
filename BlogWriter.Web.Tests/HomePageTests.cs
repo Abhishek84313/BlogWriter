@@ -81,6 +81,48 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_NewResetsEditedWordRangeToDefaults()
+    {
+        BlogWorkspaceService workspace = RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+
+        cut.Find("#min-words").Input("700");
+        cut.Find("#max-words").Input("900");
+        cut.Find("button[data-command='new']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[role='dialog']")));
+        cut.Find("button[data-confirm='discard']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("1000", cut.Find("#min-words").GetAttribute("value"));
+            Assert.Equal("2000", cut.Find("#max-words").GetAttribute("value"));
+            Assert.Equal(WordRange.Default, workspace.State.AcceptedRange);
+        });
+    }
+
+    [Fact]
+    public void Home_NewResetsSubmittedWordRangeToDefaults()
+    {
+        BlogWorkspaceService workspace = RegisterWorkspace();
+        IRenderedComponent<Home> cut = Render<Home>();
+
+        cut.Find("#initial-prompt").Input("topic");
+        cut.Find("#min-words").Input("600");
+        cut.Find("#max-words").Input("850");
+        cut.Find("button[data-command='go']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(new WordRange(600, 850), workspace.State.AcceptedRange));
+
+        cut.Find("button[data-command='new']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("1000", cut.Find("#min-words").GetAttribute("value"));
+            Assert.Equal("2000", cut.Find("#max-words").GetAttribute("value"));
+            Assert.Equal(WordRange.Default, workspace.State.AcceptedRange);
+        });
+    }
+
+    [Fact]
     public void Home_KeepsNewListAndQuitEnabledWhileReviseIsConditional()
     {
         RegisterWorkspace();
@@ -235,7 +277,7 @@ public sealed class HomePageTests : BunitContext
         public IReadOnlyList<BlogSessionSummary> Summaries { get; init; } = [];
 
         public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default, IProgress<WorkflowOutputUpdate>? output = null) =>
-            Task.FromResult(CreateSession(prompt));
+            Task.FromResult(CreateSession(prompt, minWords, maxWords));
 
         public Task<BlogSession> ReviseAsync(
             BlogSession session,
@@ -259,13 +301,20 @@ public sealed class HomePageTests : BunitContext
                 State = new ResearchState { MainTask = "loaded", Draft = "loaded", ReviewNotes = "loaded review" },
             });
 
-        private static BlogSession CreateSession(string prompt) => new()
+        private static BlogSession CreateSession(string prompt, int minWords, int maxWords) => new()
         {
             Id = Guid.NewGuid().ToString("N"),
             OwnerId = "owner",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
-            State = new ResearchState { MainTask = prompt, Draft = "draft", ReviewNotes = "review" },
+            State = new ResearchState
+            {
+                MainTask = prompt,
+                Draft = "draft",
+                ReviewNotes = "review",
+                MinWords = minWords,
+                MaxWords = maxWords,
+            },
         };
     }
 }

@@ -1,6 +1,6 @@
-# BlogWriter, an open source project is [documented here](https://jesseliberty.com)
+# BlogWriter: an open source project
 
-This program, **Blog Writer**, is designed to research and write blog posts. It was written with *Microsoft Agent Framework* and the principal actors are the **BloggerAgent** which works as the orchestrator, the **ResearcherAgent** which goes out to the Web to research the requested topic, the **AuthorAgent** which then writes the blog post, and the **ReviewerAgent** which reviews the proposed blog post, sending it back to the AuthorAgent if it is not approved.
+This program, **Blog Writer**, is designed to research and write blog posts. It was written with *Microsoft Agent Framework* and the principal actors are the **BloggerAgent** which works as the orchestrator, the **ResearcherAgent** which goes out to the Web (and to *Microsoft Learn*) to research the requested topic, the **AuthorAgent** which then writes the blog post, and the **ReviewerAgent** which reviews the proposed blog post, sending it back to the AuthorAgent if it is not approved.
 
 *Note: BlogWriter was written as a demonstration program and is not ready for production.*
 
@@ -11,15 +11,15 @@ the same workflow and Cosmos session store. It includes separate draft and revie
 panes, prompt and revision inputs, numbered saved-session recall, bounded cancellation,
 and responsive WCAG 2.2 AA-oriented controls. The compact `Min` and `Max` fields between
 the prompts and content panes set the target word range for new drafts and revisions;
-they default to 1000 and 2000 words. Workflow progress, validation, cancellation, and
-failure messages appear as an ordered log beneath the New/List/Revise/Quit buttons.
-Reviewer feedback is kept in Reviewer notes as it arrives and accumulates across
-revisions for the active session; it is cleared when starting New or loading another
-session. In List mode, enter the one-based session number beside List to restore the
-saved MainTask and optional CurrentSubTask and launch it immediately. The `?` command
-shows and copies the HTTPS launch command. The Revision request field is editable after
-New, while Revise becomes available once a draft/session exists. Workflow status is
-shown as one latest-message line; Reviewer notes remain separate.
+they default to 1000 and 2000 words. Workflow progresss below the buttons.
+Reviewer feedback is displayed in the window when the draft is rejected. 
+It is cleared when starting New or loading another
+session or modifying the current query.
+
+In List mode, enter the one-based session number beside List to restore the
+saved MainTask and optional CurrentSubTask and launch it immediately. For now, the `?` command
+shows and copies the HTTPS launch command. The query field is editable after
+New, while Revise becomes available once a draft/session exists. 
 
 After configuring Microsoft Entra, Foundry, and Cosmos values from
 [docs/configuration.md](docs/configuration.md), start it with:
@@ -35,7 +35,7 @@ The original console remains available with `dotnet run --project BlogWriter.csp
 The 4 agents are deployed as independent **Azure AI Foundry Hosted Agents**
 (Foundry Agent Service), each with its own managed compute, dedicated
 Microsoft Entra ID identity, and OpenAI-compatible `/responses` endpoint. The
-console app (this project) no longer builds the agents in-process — it only
+console app does not build the agents in-process — it only
 **orchestrates** them locally via the MAF Workflow in `BlogWorkflow.cs`,
 calling each hosted agent as a remote `IChatClient`
 using the Microsoft Agent Framework Foundry integration.
@@ -69,11 +69,13 @@ auth, no API keys:
 | `AUTHOR_AGENT_NAME` | no | `Author` | |
 | `REVIEWER_AGENT_NAME` | no | `Reviewer` | |
 | `MAX_TOTAL_TOKENS` | no | `40000` | Cumulative process-wide cap (`TokenCapChatClient`) |
+| `COSMOS_ENDPOINT` | yes | `cosmos endpoint` | |
+| `COSMOS_DATABASE_NAME` | yes | `blogWriter` | |
+| `COSMOS_CONTAINER_NAME` | yes | container name | |
 
 ## Documentation
 
 * [docs/architecture.md](docs/architecture.md) — full architecture, workflow graph, auth, and token-budget details.
-* [docs/changelog-v1-to-v2.md](docs/changelog-v1-to-v2.md) — what changed from the original in-process design to the current hosted-agent one.
 * [docs/deployment.md](docs/deployment.md) — the `azd` flow for deploying/redeploying each hosted agent and running the console app locally.
 * [docs/configuration.md](docs/configuration.md) — every environment variable/secret used by the console app and the four hosted agents.
 
@@ -88,4 +90,3 @@ auth, no API keys:
 * Middleware is used to manage the tools.
 * OpenTelemetry is used to manage logging and emits a GenAI span per model round-trip.
 * ChatOptions sets the temperature to 0 for maximum consistency.
-

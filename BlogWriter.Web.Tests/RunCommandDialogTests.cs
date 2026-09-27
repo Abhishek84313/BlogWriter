@@ -8,39 +8,20 @@ public sealed class RunCommandDialogTests : BunitContext
     public RunCommandDialogTests() => JSInterop.Mode = JSRuntimeMode.Loose;
 
     [Fact]
-    public void Dialog_ShowsExactRunCommandAndAccessibleModal()
+    public void Dialog_ShowsAboutTextAndAccessibleModal()
     {
         HelpDialogTestHelpers.AllowDialogOpen(this);
         IRenderedComponent<RunCommandDialog> cut = Render<RunCommandDialog>();
 
-        Assert.Equal(RunCommandDialog.CommandText, cut.Find(".run-command-text").TextContent);
-        Assert.Contains(RunCommandDialog.HttpsPort, cut.Find(".run-command-port").TextContent);
+        Assert.Contains("About BlogWriter", cut.Markup);
+        Assert.Contains("BlogWriter", cut.Markup);
+        Assert.Contains("An open source program", cut.Markup);
+        Assert.Contains("(c) Copyright 2026 Jesse Liberty", cut.Markup);
+        Assert.Contains("See License", cut.Markup);
         Assert.Equal("dialog", cut.Find("dialog").GetAttribute("role"));
         Assert.Equal("true", cut.Find("dialog").GetAttribute("aria-modal"));
-        Assert.Equal("Copy", cut.Find(".dialog-actions button").TextContent.Trim());
-    }
-
-    [Fact]
-    public void Dialog_CopyReportsSuccess()
-    {
-        HelpDialogTestHelpers.AllowDialogOpen(this);
-        IRenderedComponent<RunCommandDialog> cut = Render<RunCommandDialog>();
-
-        cut.Find(".dialog-actions button").Click();
-
-        Assert.Contains("Command copied", cut.Markup);
-    }
-
-    [Fact]
-    public void Dialog_CopyFailureKeepsCommandVisibleAndReportsFailure()
-    {
-        HelpDialogTestHelpers.AllowDialogOpen(this);
-        HelpDialogTestHelpers.FailClipboardCopy(this);
-        IRenderedComponent<RunCommandDialog> cut = Render<RunCommandDialog>();
-
-        cut.Find(".dialog-actions button").Click();
-
-        Assert.Contains(RunCommandDialog.CommandText, cut.Markup);
-        Assert.Contains("Copying was not available", cut.Markup);
+        Assert.DoesNotContain("Copy", cut.FindAll(".dialog-actions button").Select(button => button.TextContent));
+        Assert.DoesNotContain("HTTPS port", cut.Markup);
+        Assert.Equal("Close", cut.Find(".dialog-actions button").TextContent.Trim());
     }
 }

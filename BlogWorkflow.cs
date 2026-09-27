@@ -44,19 +44,21 @@ public class BlogWorkflow(
         Workflow workflow = new WorkflowBuilder(bloggerExecutor)
             .AddEdge(bloggerExecutor, researcherExecutor)
             .AddEdge(researcherExecutor, authorExecutor)
-            .AddEdge(authorExecutor, reviewerExecutor)
+            // Review only the initial author pass. A rejected review can route back
+            // to the author once, but the capped revision is terminal output.
+            .AddEdge<ResearchState>(authorExecutor, reviewerExecutor,
+                condition: s => s?.RevisionNumber < ResearchState.MaxRevisions)
             // Bounded revision loop: route back to the author only while the draft
-            // still needs work and the revision cap has not been reached. When the
-            // condition is false the reviewer instead yields the final output.
+            // still needs work and the revision cap has not been reached.
             .AddEdge<ResearchState>(reviewerExecutor, authorExecutor, condition: s => s?.NeedsRevision == true)
-            .WithOutputFrom(reviewerExecutor)
+            .WithOutputFrom(reviewerExecutor, authorExecutor)
             .Build();
 
         // Stream execution instead of running to completion in one shot. The
-        // topology is identical to before (proven terminating, MAF-Doctor grade A);
-        // streaming simply surfaces each executor's lifecycle as it happens, giving
-        // live progress. The final ResearchState is captured from the
-        // WorkflowOutputEvent emitted by the reviewer.
+        // topology is proven terminating; streaming simply surfaces each
+        // executor's lifecycle as it happens, giving live progress. The final
+        // ResearchState is captured from the WorkflowOutputEvent emitted by the
+        // reviewer after approval or the author after the single revision.
         StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow, state, cancellationToken: cancellationToken);
 
         ResearchState? result = null;
@@ -90,7 +92,7 @@ public class BlogWorkflow(
                         new InvalidOperationException($"Workflow executor '{failed.ExecutorId}' failed.");
 
                 case WorkflowOutputEvent { Data: ResearchState finalState }:
-                    // The reviewer yielded the final, approved (or revision-capped) state.
+                    // Reviewer approval or the capped author revision yields the final state.
                     result = finalState;
                     publisher.PublishLifecycle(WorkflowOutputOutcome.Success, "Writing workflow completed.");
                     break;

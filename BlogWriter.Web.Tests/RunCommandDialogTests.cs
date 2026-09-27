@@ -16,7 +16,7 @@ public sealed class RunCommandDialogTests : BunitContext
         Assert.Contains("About BlogWriter", cut.Markup);
         Assert.Contains("BlogWriter", cut.Markup);
         Assert.Contains("An open source program", cut.Markup);
-        Assert.Contains("(c) Copyright 2026 Jesse Liberty", cut.Markup);
+        Assert.Contains("© Copyright 2026 Jesse Liberty", cut.Markup);
         Assert.Contains("See License", cut.Markup);
         Assert.Equal("dialog", cut.Find("dialog").GetAttribute("role"));
         Assert.Equal("true", cut.Find("dialog").GetAttribute("aria-modal"));

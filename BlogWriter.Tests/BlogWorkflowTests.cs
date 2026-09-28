@@ -57,6 +57,9 @@ public sealed class BlogWorkflowTests
         Assert.Equal("draft-2", session.State.Draft);
         Assert.Equal("Please revise the introduction.", session.State.ReviewNotes);
         Assert.Equal(2, author.Calls);
+        Assert.Equal(2, author.ReviewNotesSeen.Count);
+        Assert.Equal("", author.ReviewNotesSeen[0]);
+        Assert.Equal("Please revise the introduction.", author.ReviewNotesSeen[1]);
         Assert.Equal(1, reviewer.Calls);
         Assert.Contains(output.Updates, update =>
             update.Kind == WorkflowOutputKind.Lifecycle &&
@@ -74,13 +77,17 @@ public sealed class BlogWorkflowTests
             author,
             reviewer,
             NullLogger<BlogWorkflow>.Instance);
+        var output = new WorkflowOutputCollector();
 
         var service = new BlogWriterSessionService(workflow, new RecordingStore());
-        BlogSession session = await service.StartAsync("topic");
+        BlogSession session = await service.StartAsync("topic", output: output);
 
         Assert.Equal("draft-1", session.State.Draft);
         Assert.Equal(2, author.Calls);
         Assert.Equal(1, reviewer.Calls);
+        Assert.Contains(output.Updates, update =>
+            update.Kind == WorkflowOutputKind.Lifecycle &&
+            update.Outcome == WorkflowOutputOutcome.Success);
     }
 
     private sealed class TestBlogger : IBloggerAgent
@@ -113,6 +120,7 @@ public sealed class BlogWorkflowTests
         private readonly IReadOnlyList<string?> _drafts = drafts;
 
         public int Calls { get; private set; }
+        public List<string> ReviewNotesSeen { get; } = [];
 
         public Task<string?> InvokeAsync(ResearchState state, CancellationToken cancellationToken = default) =>
             Task.FromResult(_drafts[Math.Min(Calls, _drafts.Count - 1)]);
@@ -120,6 +128,7 @@ public sealed class BlogWorkflowTests
         public Task<ResearchState> AuthorNodeAsync(ResearchState state, CancellationToken cancellationToken = default)
         {
             string? draft = _drafts[Math.Min(Calls, _drafts.Count - 1)];
+            ReviewNotesSeen.Add(state.ReviewNotes);
             Calls++;
             state.RevisionNumber++;
             if (!string.IsNullOrEmpty(draft))

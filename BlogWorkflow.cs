@@ -47,7 +47,7 @@ public class BlogWorkflow(
             // Review only the initial author pass. A rejected review can route back
             // to the author once, but the capped revision is terminal output.
             .AddEdge<ResearchState>(authorExecutor, reviewerExecutor,
-                condition: s => s?.RevisionNumber < ResearchState.MaxRevisions)
+                condition: s => s is not null && s.RevisionNumber < ResearchState.MaxRevisions)
             // Bounded revision loop: route back to the author only while the draft
             // still needs work and the revision cap has not been reached.
             .AddEdge<ResearchState>(reviewerExecutor, authorExecutor, condition: s => s?.NeedsRevision == true)

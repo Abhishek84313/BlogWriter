@@ -1,7 +1,7 @@
 <section class="work-pane draft-pane" aria-labelledby="draft-heading">
     <header class="pane-heading">
         <span class="pane-index">01</span>
-        <h2 id="draft-heading">Draft</h2>
+        <h2 id="draft-heading">@Heading</h2>
     </header>
     <div class="pane-content" tabindex="0">
         @if (ChildContent is not null)
@@ -20,6 +20,9 @@
 </section>
 
 @code {
+    [Parameter]
+    public string Heading { get; set; } = "Draft";
+
     [Parameter]
     public string Content { get; set; } = "";
 

@@ -51,7 +51,7 @@
         <section class="work-grid">
             @if (Workspace.State.Mode == WorkspaceMode.List)
             {
-                <DraftPane>
+                <DraftPane Heading="List">
                     @if (Workspace.State.DisplayedSessions.Count == 0)
                     {
                         <p class="empty-copy">No saved sessions are available.</p>

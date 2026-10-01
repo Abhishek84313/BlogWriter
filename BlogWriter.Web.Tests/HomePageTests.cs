@@ -61,6 +61,22 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
+    public void Home_DraftPaneHeadingReadsListInListModeAndDraftOtherwise()
+    {
+        RegisterWorkspace([
+            new BlogSessionSummary(Guid.NewGuid().ToString("N"), "first topic", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+        ]);
+        IRenderedComponent<Home> cut = Render<Home>();
+        Assert.Equal("Draft", cut.Find("#draft-heading").TextContent.Trim());
+
+        cut.Find("button[data-command='list']").Click();
+        cut.WaitForAssertion(() => Assert.Equal("List", cut.Find("#draft-heading").TextContent.Trim()));
+
+        cut.Find("#command-session-number").Change("1");
+        cut.WaitForAssertion(() => Assert.Equal("Draft", cut.Find("#draft-heading").TextContent.Trim()));
+    }
+
+    [Fact]
     public void Home_NewClearsWorkspace()
     {
         BlogWorkspaceService workspace = RegisterWorkspace();

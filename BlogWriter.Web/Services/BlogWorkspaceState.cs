@@ -107,6 +107,11 @@ public sealed class BlogWorkspaceState
     public bool IsInitialPromptEnabled => !IsProcessing && !IsRevisionRequested;
 
     /// <summary>
+    /// Min and Max are locked after Go until the draft is populated (or the operation ends).
+    /// </summary>
+    public bool IsWordRangeEnabled => !IsProcessing;
+
+    /// <summary>
     /// Prompt text as last accepted by a completed writing operation. Prompts keep their
     /// text after Go, so only text that differs from these counts as unsaved.
     /// </summary>

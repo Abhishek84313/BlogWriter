@@ -228,9 +228,39 @@ public sealed class HomePageTests : BunitContext
         });
     }
 
-    private BlogWorkspaceService RegisterWorkspace(IReadOnlyList<BlogSessionSummary>? summaries = null)
+    [Fact]
+    public void Home_WordRangeLocksAfterGoUntilDraftIsPopulated()
     {
-        var sessions = new StubSessionService { Summaries = summaries ?? [] };
+        var pendingStart = new TaskCompletionSource<BlogSession>(TaskCreationOptions.RunContinuationsAsynchronously);
+        RegisterWorkspace(pendingStart: pendingStart);
+        IRenderedComponent<Home> cut = Render<Home>();
+        Assert.False(cut.Find("#min-words").HasAttribute("disabled"));
+        Assert.False(cut.Find("#max-words").HasAttribute("disabled"));
+
+        cut.Find("#initial-prompt").Input("topic");
+        cut.Find("button[data-command='go']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(cut.Find("#min-words").HasAttribute("disabled"));
+            Assert.True(cut.Find("#max-words").HasAttribute("disabled"));
+        });
+
+        pendingStart.SetResult(StubSessionService.CreateSession("topic"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("draft", cut.Find("[aria-labelledby='draft-heading']").TextContent);
+            Assert.False(cut.Find("#min-words").HasAttribute("disabled"));
+            Assert.False(cut.Find("#max-words").HasAttribute("disabled"));
+        });
+    }
+
+    private BlogWorkspaceService RegisterWorkspace(
+        IReadOnlyList<BlogSessionSummary>? summaries = null,
+        TaskCompletionSource<BlogSession>? pendingStart = null)
+    {
+        var sessions = new StubSessionService { Summaries = summaries ?? [], PendingStart = pendingStart };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(10));
         Services.AddSingleton(workspace);
         return workspace;
@@ -240,8 +270,10 @@ public sealed class HomePageTests : BunitContext
     {
         public IReadOnlyList<BlogSessionSummary> Summaries { get; init; } = [];
 
+        public TaskCompletionSource<BlogSession>? PendingStart { get; init; }
+
         public Task<BlogSession> StartAsync(string prompt, int minWords = ResearchState.DefaultMinWords, int maxWords = ResearchState.DefaultMaxWords, CancellationToken cancellationToken = default, IProgress<WorkflowOutputUpdate>? output = null) =>
-            Task.FromResult(CreateSession(prompt));
+            PendingStart?.Task ?? Task.FromResult(CreateSession(prompt));
 
         public Task<BlogSession> ReviseAsync(
             BlogSession session,
@@ -265,7 +297,7 @@ public sealed class HomePageTests : BunitContext
                 State = new ResearchState { MainTask = "loaded", Draft = "loaded", ReviewNotes = "loaded review" },
             });
 
-        private static BlogSession CreateSession(string prompt) => new()
+        public static BlogSession CreateSession(string prompt) => new()
         {
             Id = Guid.NewGuid().ToString("N"),
             OwnerId = "owner",

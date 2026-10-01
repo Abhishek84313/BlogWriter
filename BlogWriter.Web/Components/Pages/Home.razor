@@ -45,6 +45,7 @@
                 MaxValueChanged="Workspace.UpdateMaxWords"
                 MinError="@Workspace.State.MinWordsError"
                 MaxError="@Workspace.State.MaxWordsError"
+                Disabled="@(!Workspace.State.IsWordRangeEnabled)"
                 Go="Workspace.SubmitAsync" />
 
         <section class="work-grid">

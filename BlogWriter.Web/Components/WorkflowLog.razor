@@ -1,0 +1,22 @@
+<section class="workflow-log" aria-label="Workflow log" aria-live="polite" aria-atomic="false" tabindex="0">
+    <h2 class="visually-hidden">Workflow log</h2>
+    @if (string.IsNullOrWhiteSpace(CurrentStatus))
+    {
+        <p class="empty-copy">No workflow activity yet.</p>
+    }
+    else
+    {
+        <p class="workflow-status workflow-log-@CurrentStatusOutcome?.ToString().ToLowerInvariant()">@CurrentStatus</p>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<WorkflowLogEntry> Entries { get; set; } = [];
+
+    [Parameter]
+    public string? CurrentStatus { get; set; }
+
+    [Parameter]
+    public WorkflowOutputOutcome? CurrentStatusOutcome { get; set; }
+}

@@ -41,7 +41,7 @@ Replace the local JSON-only session store with a Cosmos DB for NoSQL-backed `IBl
 *GATE: Passed before Phase 0 research. Re-checked after Phase 1 design: passed.*
 
 | Principle | Plan response | Status |
-|-----------|---------------|--------|
+| ----------- | --------------- | -------- |
 | Hosted-Agent Boundaries | Changes are limited to console-owned session persistence and commands; no hosted-agent code or raw agent HTTP calls. | Pass |
 | MAF-Native Workflow Composition | Existing `ResearchState` and bounded follow-up routing remain the workflow source of truth. | Pass |
 | Identity, Secrets, and Budget Control | Cosmos uses Entra tokens and Cosmos data-plane RBAC; endpoint/database/container names are configuration values; no model-call behavior changes. | Pass |
@@ -97,6 +97,6 @@ specs/[###-feature]/
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| ----------- | ---------- | ------------------------------------- |
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

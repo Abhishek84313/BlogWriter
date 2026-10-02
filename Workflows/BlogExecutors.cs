@@ -27,28 +27,44 @@ internal sealed partial class AuthorExecutor(IAuthorAgent author) : Executor("Au
 {
     [MessageHandler]
     private async ValueTask<ResearchState> HandleAsync(ResearchState state, IWorkflowContext context, CancellationToken cancellationToken)
-        => await author.AuthorNodeAsync(state, cancellationToken);
+    {
+        state = await author.AuthorNodeAsync(state, cancellationToken);
+
+        if (state.RevisionNumber >= ResearchState.MaxRevisions)
+        {
+            await context.YieldOutputAsync(state);
+        }
+
+        return state;
+    }
 }
 
 /// <summary>
-/// Reviews the draft and records approval / revision notes. Acts as the terminal
-/// output node: when no further revision is needed it yields the final state.
+/// Reviews the initial draft and records approval / revision notes. It yields
+/// approved output; a rejected draft routes to the author for one revision.
 /// </summary>
-internal sealed partial class ReviewerExecutor(IReviewerAgent reviewer) : Executor("Reviewer")
+internal sealed partial class ReviewerExecutor(
+    IReviewerAgent reviewer,
+    WorkflowOutputPublisher? publisher) : Executor("Reviewer")
 {
     [MessageHandler]
     private async ValueTask<ResearchState> HandleAsync(ResearchState state, IWorkflowContext context, CancellationToken cancellationToken)
     {
         state = await reviewer.ReviewerNodeAsync(state, cancellationToken);
 
+        if (!string.IsNullOrWhiteSpace(state.ReviewNotes))
+        {
+            publisher?.PublishReviewer(state.ReviewNotes, state.RevisionNumber);
+        }
+
         if (!state.NeedsRevision)
         {
-            // Approved, or the revision cap was hit — emit the final result.
+            // Approval is terminal here. A capped revision is emitted by the author.
             await context.YieldOutputAsync(state);
         }
 
-        // Returned state is routed back to the author only when the loop edge
-        // condition (NeedsRevision) is satisfied; otherwise it goes nowhere.
+        // Rejected initial state is routed back to the author only when the loop
+        // edge condition (NeedsRevision) is satisfied.
         return state;
     }
 }

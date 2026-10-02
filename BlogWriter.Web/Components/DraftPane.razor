@@ -1,0 +1,28 @@
+<section class="work-pane draft-pane" aria-labelledby="draft-heading">
+    <header class="pane-heading">
+        <span class="pane-index">01</span>
+        <h2 id="draft-heading">Draft</h2>
+    </header>
+    <div class="pane-content" tabindex="0">
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else if (string.IsNullOrWhiteSpace(Content))
+        {
+            <p class="empty-copy">Your draft will appear here.</p>
+        }
+        else
+        {
+            <article class="draft-copy">@Content</article>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string Content { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

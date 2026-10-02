@@ -1,7 +1,7 @@
 # Deployment guide
 
-BlogWriter has two independently deployable parts: the four Azure AI Foundry Hosted
-Agents, and the console app that orchestrates them. See
+BlogWriter has three runtime parts: four independently deployed Azure AI Foundry Hosted
+Agents, the local console host, and the optional Blazor web host. See
 [architecture.md](architecture.md) for how they fit together and
 [configuration.md](configuration.md) for the full environment variable reference.
 
@@ -65,7 +65,7 @@ It will prompt for a topic and a min/max word count, then stream workflow progre
 (`[trace] → ...` / `[trace] ← ...` lines) before printing the final approved draft.
 The signed-in Azure CLI user requires the Cosmos DB Built-in Data Contributor role
 assigned by `sessionStorePrincipalId`. Enter `list` at the topic prompt to display the
-20 newest sessions for that user, or `resume <session-id>` to continue one after
+20 newest sessions for that user, or `resume <number>` to continue one after
 restarting the application.
 
 ## Session lifecycle
@@ -75,7 +75,32 @@ user. Account-deletion automation must call `CosmosBlogSessionStore.DeleteOwnerS
 using an identity with the Cosmos DB data contributor role; this console application
 does not observe Microsoft Entra account deletion events itself.
 
-## 4. Verifying a deployment
+## 4. Run the Blazor web app
+
+Register a confidential web application in Microsoft Entra ID with an HTTPS redirect
+URI ending in `/signin-oidc`. For local development, store its client secret using the
+commands in [configuration.md](configuration.md), run `az login`, and grant that user
+the existing Foundry and Cosmos roles.
+
+```powershell
+dotnet run --project BlogWriter.Web/BlogWriter.Web.csproj
+```
+
+In production, configure `AzureResources:CredentialMode` as `ManagedIdentity`. Store
+the OIDC certificate in Key Vault, register its public certificate on the Entra app,
+and grant the web app's system-assigned managed identity permission to read both the
+Key Vault certificate and its linked secret. Grant the same managed identity the
+required Foundry and Cosmos data-plane roles.
+
+The authenticated user's immutable `oid` claim remains the Cosmos session owner. The
+managed identity only authorizes the server to reach Azure resources and must never be
+used as the session partition owner.
+
+New, List, and Quit remain available while workflow work is active. After discard
+confirmation, the web host requests cancellation, waits up to 10 seconds, suppresses
+any late result, and completes the requested transition.
+
+## 5. Verifying a deployment
 
 After `azd deploy` for a given agent, confirm it's healthy before wiring the console app
 to it:
@@ -86,7 +111,7 @@ to it:
    and no unhandled exceptions. Startup warnings about Kestrel address binding or a 404
    on the very first task-storage lookup (before the task exists) are expected noise, not
    failures.
-3. Run the console app end-to-end once against the redeployed agent and confirm the
+3. Run the console or web app end-to-end once against the redeployed agent and confirm the
    reviewer reaches `APPROVED` (or a clear revision-cap message) with no exceptions.
 
 ## Never do this

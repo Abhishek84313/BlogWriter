@@ -1,0 +1,48 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="dialog-backdrop">
+    <dialog @ref="_dialog" role="dialog" aria-modal="true" aria-labelledby="run-command-title" aria-describedby="run-command-copy" class="confirm-dialog run-command-dialog">
+        <p class="dialog-kicker">About BlogWriter</p>
+        <h2 id="run-command-title">BlogWriter</h2>
+        <p id="run-command-copy">An open source program</p>
+        <p>© Copyright 2026 Jesse Liberty</p>
+        <p>See License</p>
+        <div class="dialog-actions">
+            <button type="button" data-command="close-help" @onclick="Close">Close</button>
+        </div>
+    </dialog>
+</div>
+
+@code {
+    private ElementReference _dialog;
+    private bool _opened;
+
+    [Parameter]
+    public EventCallback Closed { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("blogWriterDialog.show", _dialog);
+            _opened = true;
+        }
+    }
+
+    private async Task Close() => await Closed.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_opened)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("blogWriterDialog.close", _dialog);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

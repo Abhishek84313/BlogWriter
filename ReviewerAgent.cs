@@ -30,6 +30,15 @@ public class ReviewerAgent : IReviewerAgent
         _logger.LogInformation("ReviewerAgent initialized.");
     }
 
+    public ReviewerAgent(IChatClient llm, ChatOptions chatOptions, ILogger<ReviewerAgent> logger)
+        : this(new ChatClientAgent(llm, new ChatClientAgentOptions
+        {
+            Name = "Reviewer",
+            ChatOptions = chatOptions,
+        }), logger)
+    {
+    }
+
     public async Task<string> InvokeAsync(ResearchState state, CancellationToken cancellationToken = default)
     {
         using Activity? activity = s_activitySource.StartActivity("Reviewer.Invoke");
@@ -51,7 +60,9 @@ public class ReviewerAgent : IReviewerAgent
         {
             AgentResponse response = await _agent.RunAsync(message, cancellationToken: cancellationToken);
             string content = response.Text;
-            return !string.IsNullOrEmpty(content) ? content : ManageError("No review content returned from the agent.");
+            return !string.IsNullOrWhiteSpace(content)
+                ? content
+                : throw new InvalidOperationException("The reviewer returned no content.");
         }
         catch (TokenCapExceededException)
         {
@@ -60,25 +71,9 @@ public class ReviewerAgent : IReviewerAgent
         }
         catch (Exception e)
         {
-            return ManageError(e.Message, e);
+            _logger.LogError(e, "Reviewer agent failed.");
+            throw;
         }
-    }
-
-    private string ManageError(string reason, Exception? exception = null)
-    {
-        // Do NOT approve on failure — that would ship an unreviewed draft.
-        // Returning feedback (not "APPROVED") routes back to the author for
-        // another attempt; the revision cap still guarantees termination.
-        if (exception is not null)
-        {
-            _logger.LogError(exception, "Review failed: {Reason}", reason);
-        }
-        else
-        {
-            _logger.LogWarning("Review could not be completed: {Reason}", reason);
-        }
-
-        return "Review could not be completed due to a transient error. Please revise and resubmit the draft.";
     }
 
     /// <summary>Node that reviews the draft.</summary>

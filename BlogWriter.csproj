@@ -13,6 +13,8 @@
   <ItemGroup>
     <!-- BlogWriter.Tests, HostedAgents/*, and the shared prompt library are separate projects nested under this folder; exclude them from this project's default glob. -->
     <Compile Remove="BlogWriter.Tests\**\*.cs" />
+    <Compile Remove="BlogWriter.Web\**\*.cs" />
+    <Compile Remove="BlogWriter.Web.Tests\**\*.cs" />
     <Compile Remove="HostedAgents\**\*.cs" />
     <Compile Remove="BlogWriter.Prompts\**\*.cs" />
   </ItemGroup>

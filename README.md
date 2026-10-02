@@ -2,21 +2,45 @@
 
 This open source demonstration program, **Blog Writer**, is designed to research and write first draft blog posts. It was written with *Microsoft Agent Framework* and the principal actors are the **BloggerAgent** which works as the orchestrator, the **ResearcherAgent** which goes out to the Web to research the requested topic, the **AuthorAgent** which then writes the blog post, and the **ReviewerAgent** which reviews the proposed blog post, sending it back to the AuthorAgent if it is not approved.
 
-The system prompts for each agent is contained in Prompts.cs
+*Note: BlogWriter was written as a demonstration program and is not ready for production.*
 
-BlogWorkflow is responsible for creating the nodes and edges for moving through the workflow and also contains the logic for managing a breach of the token-cap (the maximum number of tokens that can be used in a single request, as defined in TokenCapChatClient).
+## Blazor web interface
+
+`BlogWriter.Web` provides an authenticated Interactive Server Blazor workspace over
+the same workflow and Cosmos session store. It includes separate draft and reviewer
+panes, prompt and revision inputs, numbered saved-session recall, bounded cancellation,
+and responsive WCAG 2.2 AA-oriented controls. The compact `Min` and `Max` fields between
+the prompts and content panes set the target word range for new drafts and revisions;
+they default to 1000 and 2000 words. Workflow progresss below the buttons.
+Reviewer feedback is displayed in the window when the draft is rejected. 
+It is cleared when starting New or loading another
+session or modifying the current query.
+
+In List mode, enter the one-based session number beside List to restore the
+saved MainTask and optional CurrentSubTask and launch it immediately. For now, the `?` command
+shows and copies the HTTPS launch command. The query field is editable after
+New, while Revise becomes available once a draft/session exists. 
+
+After configuring Microsoft Entra, Foundry, and Cosmos values from
+[docs/configuration.md](docs/configuration.md), start it with:
+
+```powershell
+dotnet run --project BlogWriter.Web/BlogWriter.Web.csproj
+```
+
+The original console remains available with `dotnet run --project BlogWriter.csproj`.
 
 ## Architecture: Azure AI Foundry Hosted Agents
 
 The 4 agents are deployed as independent **Azure AI Foundry Hosted Agents**
 (Foundry Agent Service), each with its own managed compute, dedicated
 Microsoft Entra ID identity, and OpenAI-compatible `/responses` endpoint. The
-console app (this project) no longer builds the agents in-process — it only
+console app does not build the agents in-process — it only
 **orchestrates** them locally via the MAF Workflow in `BlogWorkflow.cs`,
 calling each hosted agent as a remote `IChatClient`
 using the Microsoft Agent Framework Foundry integration.
 
-```
+```text
 BlogWriter/                (console app — orchestration only, calls hosted agents remotely)
 HostedAgents/
   Blogger/                 (Foundry Hosted Agent — orchestration decisions)
@@ -33,7 +57,7 @@ runtime.
 ### Configuration (console app)
 
 Set via `dotnet user-secrets` (preferred for local dev) or environment
-variables — Entra ID (`DefaultAzureCredential`) is used for all Foundry/model
+variables — Entra ID (`AzureCliCredential`) is used for local Foundry/model
 auth, no API keys:
 
 | Key | Required | Default | Notes |
@@ -45,16 +69,21 @@ auth, no API keys:
 | `AUTHOR_AGENT_NAME` | no | `Author` | |
 | `REVIEWER_AGENT_NAME` | no | `Reviewer` | |
 | `MAX_TOTAL_TOKENS` | no | `40000` | Cumulative process-wide cap (`TokenCapChatClient`) |
+| `COSMOS_ENDPOINT` | yes | `cosmos endpoint` | |
+| `COSMOS_DATABASE_NAME` | yes | `blogWriter` | |
+| `COSMOS_CONTAINER_NAME` | yes | container name | |
 
 ## Documentation
 * [.specify/memory/constitution.md](.specify/memory/constitution.md) - Constraints on SDD
+
 * [docs/architecture.md](docs/architecture.md) — full architecture, workflow graph, auth, and token-budget details.
 * [docs/deployment.md](docs/deployment.md) — the `azd` flow for deploying/redeploying each hosted agent and running the console app locally.
 * [docs/configuration.md](docs/configuration.md) — every environment variable/secret used by the console app and the four hosted agents.
 
 ## Miscellaneous Notes
+
 * Web search runs **inside the hosted Researcher agent** through Foundry's hosted web-search tool.
-* Foundry/model access uses Microsoft Entra ID exclusively; the console app authenticates with `DefaultAzureCredential`.
+* Foundry/model access uses Microsoft Entra ID exclusively; the console app authenticates with `AzureCliCredential`.
 * The model deployment is chosen per hosted agent (via `AZURE_AI_MODEL_DEPLOYMENT_NAME` in each `HostedAgents/<Name>` project), not hardcoded in the console app.
 
 ## Additional Features
@@ -65,3 +94,7 @@ auth, no API keys:
 ## Next Steps
 * The `Microsoft.Agents.AI.Foundry.Hosting` package used by `HostedAgents/*` is still prerelease — re-validate before production use.
 * See [https://github.com/JesseLiberty/BlogWriter/issues](https://github.com/JesseLiberty/BlogWriter/issues)
+
+* Middleware is used to manage the tools.
+* OpenTelemetry is used to manage logging and emits a GenAI span per model round-trip.
+* ChatOptions sets the temperature to 0 for maximum consistency.

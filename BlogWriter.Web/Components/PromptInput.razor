@@ -1,0 +1,33 @@
+<div class="prompt-field">
+    <label for="@Id">@Label</label>
+    <textarea id="@Id"
+              @ref="_input"
+              value="@Value"
+              @oninput="HandleInput"
+              disabled="@Disabled"
+              rows="2"></textarea>
+</div>
+
+@code {
+    private ElementReference _input;
+
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public string Value { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    public ValueTask FocusAsync() => _input.FocusAsync();
+
+    private Task HandleInput(ChangeEventArgs args) =>
+        ValueChanged.InvokeAsync(args.Value?.ToString() ?? "");
+}

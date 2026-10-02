@@ -29,6 +29,12 @@ public static class BlogWriterServiceCollectionExtensions
             out long configuredMaxTokens)
             ? configuredMaxTokens
             : 40000;
+        int maxOutputTokens = int.TryParse(
+            configuration["Foundry:MaxOutputTokens"] ?? configuration["MAX_OUTPUT_TOKENS"],
+            out int configuredMaxOutputTokens)
+            ? configuredMaxOutputTokens
+            : TokenCapChatClient.DefaultMaxOutputTokens;
+        services.AddSingleton(TokenCapChatClient.CreateSharedFactory(maxTokens, maxOutputTokens));
 
         services.AddSingleton(credential);
         services.AddSingleton(new CosmosClient(cosmosEndpoint.ToString(), credential));

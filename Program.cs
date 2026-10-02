@@ -34,6 +34,9 @@ string cosmosContainerName = GetRequired("COSMOS_CONTAINER_NAME");
 
 // Cumulative process-wide budget shared by all four MAF-hosted agent clients.
 long maxTotalTokens = long.TryParse(config["MAX_TOTAL_TOKENS"], out long configuredMaxTotalTokens) ? configuredMaxTotalTokens : 40000;
+int maxOutputTokens = int.TryParse(config["MAX_OUTPUT_TOKENS"], out int configuredMaxOutputTokens)
+    ? configuredMaxOutputTokens
+    : TokenCapChatClient.DefaultMaxOutputTokens;
 
 // Entra ID only — no API keys, per repository constraint. Agent Framework owns
 // the Foundry transport and Responses protocol details.
@@ -44,7 +47,7 @@ var azureCredential = new AzureCliCredential(new AzureCliCredentialOptions
 AIProjectClient projectClient = new(foundryProjectEndpoint, azureCredential);
 
 
-Func<IChatClient, IChatClient> tokenCapFactory = TokenCapChatClient.CreateSharedFactory(maxTotalTokens);
+Func<IChatClient, IChatClient> tokenCapFactory = TokenCapChatClient.CreateSharedFactory(maxTotalTokens, maxOutputTokens);
 
 // the console app uses AIProjectClient.AsAIAgent(...) to construct a remote AIAgent (researcherLlm) targeting the hosted agent endpoint
 AIAgent BuildFoundryAgent(string hostedAgentName)

@@ -1,6 +1,6 @@
-# Demo code associated with a [series of blog posts](https://jesseliberty.com)
+# Open Source demo code associated with a [series of blog posts](https://jesseliberty.com)
 
-This demonstration program, **Blog Writer**, is designed to research and write blog posts. It was written with *Microsoft Agent Framework* and the principal actors are the **BloggerAgent** which works as the orchestrator, the **ResearcherAgent** which goes out to the Web to research the requested topic, the **AuthorAgent** which then writes the blog post, and the **ReviewerAgent** which reviews the proposed blog post, sending it back to the AuthorAgent if it is not approved.
+This open source demonstration program, **Blog Writer**, is designed to research and write first draft blog posts. It was written with *Microsoft Agent Framework* and the principal actors are the **BloggerAgent** which works as the orchestrator, the **ResearcherAgent** which goes out to the Web to research the requested topic, the **AuthorAgent** which then writes the blog post, and the **ReviewerAgent** which reviews the proposed blog post, sending it back to the AuthorAgent if it is not approved.
 
 The system prompts for each agent is contained in Prompts.cs
 
@@ -47,8 +47,8 @@ auth, no API keys:
 | `MAX_TOTAL_TOKENS` | no | `40000` | Cumulative process-wide cap (`TokenCapChatClient`) |
 
 ## Documentation
+* [.specify/memory/constitution.md](.specify/memory/constitution.md) - Constraints on SDD
 * [docs/architecture.md](docs/architecture.md) — full architecture, workflow graph, auth, and token-budget details.
-* [docs/changelog-v1-to-v2.md](docs/changelog-v1-to-v2.md) — what changed from the original in-process design to the current hosted-agent one.
 * [docs/deployment.md](docs/deployment.md) — the `azd` flow for deploying/redeploying each hosted agent and running the console app locally.
 * [docs/configuration.md](docs/configuration.md) — every environment variable/secret used by the console app and the four hosted agents.
 
@@ -62,9 +62,6 @@ auth, no API keys:
 * OpenTelemetry is used to manage logging and emits a GenAI span per model round-trip
 * ChatOptions sets the temperature to 0 for maximum consistency
 
-## Known Issues
-We are seeing a lot of calls to the LLM. Either there is a problem with the calls or with the telemetry.
-
 ## Next Steps
 * The `Microsoft.Agents.AI.Foundry.Hosting` package used by `HostedAgents/*` is still prerelease — re-validate before production use.
-* Decide whether the Researcher's hosted agent should also expose the Responses+Invocations combo, or add more Foundry Toolbox tools (Code Interpreter, Azure AI Search) now that it's hosted.
+* See [https://github.com/JesseLiberty/BlogWriter/issues](https://github.com/JesseLiberty/BlogWriter/issues)

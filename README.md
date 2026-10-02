@@ -94,7 +94,3 @@ auth, no API keys:
 ## Next Steps
 * The `Microsoft.Agents.AI.Foundry.Hosting` package used by `HostedAgents/*` is still prerelease — re-validate before production use.
 * See [https://github.com/JesseLiberty/BlogWriter/issues](https://github.com/JesseLiberty/BlogWriter/issues)
-
-* Middleware is used to manage the tools.
-* OpenTelemetry is used to manage logging and emits a GenAI span per model round-trip.
-* ChatOptions sets the temperature to 0 for maximum consistency.

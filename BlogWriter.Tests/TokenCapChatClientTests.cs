@@ -51,4 +51,34 @@ public class TokenCapChatClientTests
         await Assert.ThrowsAsync<TokenCapExceededException>(
             () => secondClient.GetResponseAsync([new ChatMessage(ChatRole.User, "second agent")]));
     }
+
+    [Fact]
+    public async Task SharedFactory_AppliesDefaultOutputCapWithoutMutatingCallerOptions()
+    {
+        using var inner = new FakeChatClient(totalTokens: 10);
+        using IChatClient client = TokenCapChatClient.CreateSharedFactory(
+            maxTotalTokens: 100,
+            maxOutputTokens: 256)(inner);
+        var options = new ChatOptions { Temperature = 0.25f };
+
+        await client.GetResponseAsync([new ChatMessage(ChatRole.User, "draft")], options);
+
+        Assert.Equal(256, inner.LastOptions?.MaxOutputTokens);
+        Assert.Equal(0.25f, inner.LastOptions?.Temperature);
+        Assert.Null(options.MaxOutputTokens);
+    }
+
+    [Fact]
+    public async Task SharedFactory_PreservesExplicitOutputCap()
+    {
+        using var inner = new FakeChatClient(totalTokens: 10);
+        using IChatClient client = TokenCapChatClient.CreateSharedFactory(
+            maxTotalTokens: 100,
+            maxOutputTokens: 256)(inner);
+        var options = new ChatOptions { MaxOutputTokens = 128 };
+
+        await client.GetResponseAsync([new ChatMessage(ChatRole.User, "short answer")], options);
+
+        Assert.Equal(128, inner.LastOptions?.MaxOutputTokens);
+    }
 }

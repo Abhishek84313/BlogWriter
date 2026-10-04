@@ -25,9 +25,12 @@ public sealed class BlogWorkspaceService : IDisposable
 
     public Task SubmitAsync()
     {
-        if (State.IsRevisionInputEnabled && !string.IsNullOrWhiteSpace(State.RevisionPrompt))
+        // While revising, the writing prompt is locked, so only the revision can be submitted.
+        if (State.IsRevisionRequested)
         {
-            return SubmitRevisionAsync();
+            return string.IsNullOrWhiteSpace(State.RevisionPrompt)
+                ? Task.CompletedTask
+                : SubmitRevisionAsync();
         }
 
         if (!string.IsNullOrWhiteSpace(State.InitialPrompt))
@@ -54,8 +57,7 @@ public sealed class BlogWorkspaceService : IDisposable
                 range.Min,
                 range.Max,
                 cancellationToken,
-                output),
-            clearInput: () => State.InitialPrompt = "");
+                output));
     }
 
     public Task SubmitRevisionAsync()
@@ -82,21 +84,7 @@ public sealed class BlogWorkspaceService : IDisposable
                 range.Min,
                 range.Max,
                 cancellationToken,
-                output),
-            clearInput: () => State.RevisionPrompt = "");
-    }
-
-    public void BeginRevision()
-    {
-        if (!State.IsReviseEnabled)
-        {
-            return;
-        }
-
-        State.RevisionPrompt = "";
-        State.IsRevisionRequested = true;
-        State.ValidationMessage = null;
-        NotifyChanged();
+                output));
     }
 
     public void UpdateMinWords(string value)
@@ -131,19 +119,28 @@ public sealed class BlogWorkspaceService : IDisposable
         }
 
         await CancelActiveOperationAsync();
+        long listVersion = ++_operationVersion;
         RestoreAcceptedRange();
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
+        State.MarkPromptsSubmitted();
         State.SelectionInput = "";
         State.SelectionError = null;
         State.ValidationMessage = null;
+        State.IsListing = true;
         State.StatusMessage = "Loading saved sessions...";
         State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
         NotifyChanged();
 
         try
         {
-            State.DisplayedSessions = (await _sessions.ListAsync()).Take(20).ToList();
+            IReadOnlyList<BlogSessionSummary> summaries = await _sessions.ListAsync();
+            if (listVersion != _operationVersion)
+            {
+                return WorkspaceTransitionResult.Completed;
+            }
+
+            State.DisplayedSessions = summaries.Take(20).ToList();
             State.Mode = WorkspaceMode.List;
             State.StatusMessage = State.DisplayedSessions.Count == 0
                 ? "No saved sessions are available."
@@ -152,10 +149,22 @@ public sealed class BlogWorkspaceService : IDisposable
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (listVersion != _operationVersion)
+            {
+                return WorkspaceTransitionResult.Completed;
+            }
+
             State.DisplayedSessions = [];
             State.Mode = WorkspaceMode.Draft;
             State.ValidationMessage = "Unable to load saved sessions. Try again.";
             State.StatusMessage = null;
+        }
+        finally
+        {
+            if (listVersion == _operationVersion)
+            {
+                State.IsListing = false;
+            }
         }
 
         NotifyChanged();
@@ -227,6 +236,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.ReviewerUpdateKeys.Clear();
         State.InitialPrompt = session.State.MainTask;
         State.RevisionPrompt = session.State.CurrentSubTask;
+        State.IsRevisionRequested = true;
         State.ActiveSession = null;
         State.SelectionError = null;
         State.ValidationMessage = null;
@@ -267,8 +277,7 @@ public sealed class BlogWorkspaceService : IDisposable
     private async Task RunSessionOperationAsync(
         string input,
         WordRange submittedRange,
-        Func<CancellationToken, IProgress<WorkflowOutputUpdate>, Task<BlogSession>> operation,
-        Action clearInput)
+        Func<CancellationToken, IProgress<WorkflowOutputUpdate>, Task<BlogSession>> operation)
     {
         if (State.Mode == WorkspaceMode.Ended)
         {
@@ -293,6 +302,7 @@ public sealed class BlogWorkspaceService : IDisposable
         _operationCancellation = cancellation;
         State.IsProcessing = true;
         State.ValidationMessage = null;
+        State.Draft = "";
         State.StatusMessage = "Writing in progress...";
         State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
         NotifyChanged();
@@ -308,7 +318,7 @@ public sealed class BlogWorkspaceService : IDisposable
                 return;
             }
 
-            clearInput();
+            State.MarkPromptsSubmitted();
             Publish(session, submittedRange);
             State.StatusMessage = "Writing complete.";
             State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Success);
@@ -441,6 +451,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.Mode = mode;
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
+        State.MarkPromptsSubmitted();
         State.IsRevisionRequested = false;
         SetAcceptedAndVisibleRange(WordRange.Default);
         State.Draft = "";
@@ -450,6 +461,7 @@ public sealed class BlogWorkspaceService : IDisposable
         State.DisplayedSessions = [];
         State.SelectionInput = "";
         State.SelectionError = null;
+        State.IsListing = false;
         State.IsProcessing = false;
         State.StatusMessage = null;
         State.ValidationMessage = null;

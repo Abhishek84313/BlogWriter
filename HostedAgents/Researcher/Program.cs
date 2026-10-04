@@ -22,7 +22,7 @@ string modelDeployment = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPL
 // Foundry model and hosted web-search authentication).
 
 // The agent owns a Foundry-native HostedWebSearchTool(). Web searches, pagination, and document retrievals execute entirely inside the remote hosted process in Azure, not locally on the client machine.
-AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
+AIAgent agent = new AIProjectClient(projectEndpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned))
     .AsAIAgent(
         model: modelDeployment,
         instructions: PromptCatalog.ResearcherInstructions,

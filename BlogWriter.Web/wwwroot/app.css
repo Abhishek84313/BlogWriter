@@ -6,6 +6,7 @@
     --paper: #f7f5ee;
     --surface: #fffefa;
     --line: #cbd0c9;
+    --forest-light: #bfe6c9;
     --forest: #1e5a46;
     --forest-dark: #123d30;
     --forest-deep: #0a261d;
@@ -121,18 +122,7 @@ button, a { touch-action: manipulation; }
 .range-field input[aria-invalid="true"] { border-color: #9d2c20; }
 .range-separator { align-self: end; padding-bottom: 9px; color: var(--muted); font-size: .72rem; }
 .range-error { max-width: 150px; color: #9d2c20; font-size: .68rem; line-height: 1.25; }
-.range-go {
-    align-self: end;
-    min-height: 36px;
-    border: 1px solid var(--forest-dark);
-    padding: 6px 12px;
-    background: var(--forest);
-    color: white;
-    cursor: pointer;
-}
-.range-go:hover:not(:disabled) { background: var(--forest-dark); }
-.range-go:active:not(:disabled) { background: var(--forest-deep); }
-.range-go:disabled { border-color: var(--line); background: #ecece7; color: var(--muted); cursor: not-allowed; }
+.command-bar .range-go { align-self: end; min-height: 36px; padding: 6px 12px; }
 
 .work-grid { min-height: 32vh; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); border: 1px solid var(--ink); }
 .work-pane { min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--surface); }
@@ -170,10 +160,12 @@ button, a { touch-action: manipulation; }
 .command-bar button[data-command="new"], .command-bar button[data-command="quit"] { border-color: var(--coral-dark); background: var(--coral); color: white; }
 .command-bar button[data-command="new"]:hover:not(:disabled), .command-bar button[data-command="quit"]:hover:not(:disabled) { background: var(--coral-dark); }
 .command-bar button[data-command="new"]:active:not(:disabled), .command-bar button[data-command="quit"]:active:not(:disabled) { background: var(--coral-deep); }
-.command-bar button[data-command="list"], .command-bar button[data-command="help"] { border-color: var(--forest-dark); background: var(--forest); color: white; }
-.command-bar button[data-command="list"]:hover:not(:disabled), .command-bar button[data-command="help"]:hover:not(:disabled) { background: var(--forest-dark); }
-.command-bar button[data-command="list"]:active:not(:disabled), .command-bar button[data-command="help"]:active:not(:disabled) { background: var(--forest-deep); }
-.command-bar button:disabled { border-color: var(--line); background: #ecece7; color: #8a918c; cursor: not-allowed; }
+.command-bar button[data-command="list"], .command-bar button[data-command="help"], .command-bar button[data-command="go"] { border-color: var(--forest-dark); background: var(--forest); color: white; }
+.command-bar button[data-command="list"]:hover:not(:disabled), .command-bar button[data-command="help"]:hover:not(:disabled), .command-bar button[data-command="go"]:hover:not(:disabled) { background: var(--forest-dark); }
+.command-bar button[data-command="list"]:active:not(:disabled), .command-bar button[data-command="help"]:active:not(:disabled), .command-bar button[data-command="go"]:active:not(:disabled) { background: var(--forest-deep); }
+.command-bar button:disabled,
+.command-bar button:disabled:hover,
+.command-bar button:disabled:active { border-color: var(--line); background: #ecece7; color: #8a918c; cursor: not-allowed; }
 .danger-command { border-color: var(--coral) !important; color: var(--coral-dark) !important; }
 
 .session-selector { width: 150px; grid-column: 2; grid-row: 1 / span 2; display: grid; align-self: end; gap: 5px; }

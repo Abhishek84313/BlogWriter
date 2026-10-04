@@ -7,6 +7,8 @@ internal sealed class FakeChatClient : IChatClient
 {
     private readonly Func<UsageDetails?> _usageFactory;
 
+    public ChatOptions? LastOptions { get; private set; }
+
     public FakeChatClient(Func<UsageDetails?> usageFactory) => _usageFactory = usageFactory;
 
     public FakeChatClient(long totalTokens) : this(() => new UsageDetails { TotalTokenCount = totalTokens })
@@ -16,6 +18,7 @@ internal sealed class FakeChatClient : IChatClient
     public Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
+        LastOptions = options;
         var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"))
         {
             Usage = _usageFactory(),

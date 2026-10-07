@@ -24,6 +24,7 @@ Prefer the smallest change that preserves existing public interfaces, session fo
 - Use the repository's existing MAF and Azure SDK patterns before introducing new infrastructure or transport code.
 - Keep hosted-agent prompts and the shared prompt library aligned when either changes.
 - Treat prerelease hosted-agent packages and deployment configuration as compatibility-sensitive; validate builds and relevant tests after upgrades.
+- If you are going to show an example in Python or C# always use C# and not Python.
 
 ## Development Workflow
 

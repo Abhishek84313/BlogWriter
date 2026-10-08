@@ -38,14 +38,6 @@
                          Disabled="@(!Workspace.State.IsRevisionInputEnabled)" />
         </section>
 
-        <WordRangeInput Disabled="@(!Workspace.State.IsWordRangeEnabled)"
-            MinValue="@Workspace.State.MinWordsInput"
-                MinValueChanged="Workspace.UpdateMinWords"
-                MaxValue="@Workspace.State.MaxWordsInput"
-                MaxValueChanged="Workspace.UpdateMaxWords"
-                MinError="@Workspace.State.MinWordsError"
-                MaxError="@Workspace.State.MaxWordsError"/>
- 
         <section class="work-grid">
             @if (Workspace.State.Mode == WorkspaceMode.List)
             {
@@ -82,7 +74,17 @@
                         HelpEnabled="@Workspace.State.IsHelpCommandEnabled"
                         Go="Workspace.SubmitAsync"
                         Quit="() => RequestTransitionAsync(PendingAction.Quit)"
-                        Help="ShowHelp" />
+                        Help="ShowHelp">
+                <ChildContent>
+                    <WordRangeInput Disabled="@(!Workspace.State.IsWordRangeEnabled)"
+                                    MinValue="@Workspace.State.MinWordsInput"
+                                    MinValueChanged="Workspace.UpdateMinWords"
+                                    MaxValue="@Workspace.State.MaxWordsInput"
+                                    MaxValueChanged="Workspace.UpdateMaxWords"
+                                    MinError="@Workspace.State.MinWordsError"
+                                    MaxError="@Workspace.State.MaxWordsError" />
+                </ChildContent>
+            </CommandBar>
 
             <WorkflowLog CurrentStatus="@Workspace.State.CurrentStatus"
                          CurrentStatusOutcome="@Workspace.State.CurrentStatusOutcome" />

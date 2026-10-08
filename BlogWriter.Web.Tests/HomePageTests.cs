@@ -28,16 +28,12 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_PlacesDefaultWordRangeBetweenPromptsAndContentPanes()
+    public void Home_PlacesDefaultWordRangeInCommandBar()
     {
         RegisterWorkspace();
         IRenderedComponent<Home> cut = Render<Home>();
-        string markup = cut.Markup;
 
-        Assert.True(markup.IndexOf("prompt-strip", StringComparison.Ordinal) <
-            markup.IndexOf("word-range-row", StringComparison.Ordinal));
-        Assert.True(markup.IndexOf("word-range-row", StringComparison.Ordinal) <
-            markup.IndexOf("work-grid", StringComparison.Ordinal));
+        Assert.NotNull(cut.Find(".command-bar .command-range .word-range-row"));
         Assert.Equal("1000", cut.Find("#min-words").GetAttribute("value"));
         Assert.Equal("2000", cut.Find("#max-words").GetAttribute("value"));
         Assert.NotNull(cut.Find("button[data-command='go']"));

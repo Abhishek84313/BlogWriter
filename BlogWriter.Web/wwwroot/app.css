@@ -141,10 +141,13 @@ button, a { touch-action: manipulation; }
 .session-entry time { margin-top: 5px; color: var(--muted); font-size: .7rem; }
 
 .workspace-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px 16px; }
-.command-bar { display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px 72px 32px; gap: 6px; }
+.command-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: end; }
+.command-leading, .command-trailing { display: flex; align-items: stretch; gap: 6px; }
+.command-trailing { justify-content: flex-end; }
 .list-command { min-width: 0; display: flex; align-items: stretch; gap: 6px; }
 .list-command button { flex: 0 0 72px; }
 .list-command input { width: 3.5rem; min-width: 3.5rem; border: 1px solid var(--ink); padding: 6px 5px; background: var(--surface); color: var(--ink); text-align: center; }
+.command-range { min-width: 0; display: grid; place-items: center; }
 .help-command { padding-inline: 0 !important; }
 .command-bar button, .dialog-actions button, .command-button {
     min-height: 32px;
@@ -205,6 +208,23 @@ button, a { touch-action: manipulation; }
     .list-command input { width: 3rem; min-width: 3rem; padding-inline: 2px; }
     .workflow-log { max-height: 4.8rem; }
     .session-selector { width: 100%; }
+}
+
+@media (max-width: 900px) {
+    .workspace-footer { grid-template-columns: minmax(0, 1fr); }
+    .command-bar { width: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .command-leading, .command-trailing { display: contents; }
+    .command-leading > button[data-command="new"] { grid-column: 1; grid-row: 1; }
+    .list-command { grid-column: 2; grid-row: 1; }
+    .command-trailing > button[data-command="go"] { grid-column: 3; grid-row: 1; }
+    .command-trailing > button[data-command="quit"] { grid-column: 4; grid-row: 1; }
+    .command-trailing > button[data-command="help"] { grid-column: 5; grid-row: 1; }
+    .command-range { grid-column: 1 / -1; grid-row: 2; }
+    .command-range .word-range-row {
+        width: min(100%, 390px);
+        grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
+        justify-content: center;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

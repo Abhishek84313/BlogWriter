@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "markitdown": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:1310562ae02a4a822f3ab5d13909f377ca5c848731cbfb0f50ff4ed96abeda50",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {},
+      "registered_skills": [
+        "speckit-markitdown-convert"
+      ],
+      "installed_at": "2026-10-09T18:49:22.222596+00:00"
+    }
+  }
+}

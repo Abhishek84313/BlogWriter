@@ -48,7 +48,9 @@
                     }
                     else
                     {
-                        <SessionList Sessions="@Workspace.State.DisplayedSessions" />
+                        <SessionList Sessions="@Workspace.State.DisplayedSessions"
+                                     SelectionEnabled="@Workspace.State.IsSessionSelectionEnabled"
+                                     Selected="Workspace.RestoreSelectionAsync" />
                     }
                 </DraftPane>
             }
@@ -62,11 +64,6 @@
         <footer class="workspace-footer">
             <CommandBar New="() => RequestTransitionAsync(PendingAction.New)"
                         List="() => RequestTransitionAsync(PendingAction.List)"
-                        SelectionChanged="Workspace.LaunchSelectionAsync"
-                        SelectionVisible="@Workspace.State.IsSelectionVisible"
-                        SelectionEnabled="@Workspace.State.IsSelectionInputEnabled"
-                        SelectionInput="@Workspace.State.SelectionInput"
-                        SelectionError="@Workspace.State.SelectionError"
                         NewEnabled="@Workspace.State.IsNewCommandEnabled"
                         ListEnabled="@Workspace.State.IsListCommandEnabled"
                         GoEnabled="@Workspace.State.IsGoCommandEnabled"

@@ -24,7 +24,7 @@ public sealed class HomePageTests : BunitContext
         Assert.Equal(["New", "List", "Go", "Quit", "?"],
             cut.FindAll(".command-bar button").Select(button => button.TextContent.Trim()).ToArray());
         Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
-        Assert.False(workspace.State.IsSelectionVisible);
+        Assert.False(workspace.State.IsSessionSelectionEnabled);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_ShowsNumberInputAndKeepsRevisionDisabledForUnselectedList()
+    public void Home_ListShowsAccessibleSavedRowsWithoutNumericInput()
     {
         BlogWorkspaceService workspace = RegisterWorkspace([
             new BlogSessionSummary(Guid.NewGuid().ToString("N"), "first topic", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
@@ -50,7 +50,8 @@ public sealed class HomePageTests : BunitContext
         cut.Find("button[data-command='list']").Click();
         cut.WaitForAssertion(() =>
         {
-            Assert.NotNull(cut.Find("#command-session-number"));
+            Assert.Empty(cut.FindAll("#command-session-number"));
+            Assert.Single(cut.FindAll(".session-list button.session-entry"));
             Assert.True(cut.Find("#revision-prompt").HasAttribute("disabled"));
             Assert.Contains("[1]", cut.Find(".session-list").TextContent);
         });
@@ -211,7 +212,7 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public async Task Home_ListLocksWorkspaceButLeavesNewAndSessionSelectionUsable()
+    public async Task Home_ListLocksWorkspaceButLeavesNewAndSavedRowsUsable()
     {
         var sessions = new StubSessionService
         {
@@ -238,7 +239,7 @@ public sealed class HomePageTests : BunitContext
         sessions.PendingList.SetResult(sessions.Summaries);
         await click;
 
-        Assert.False(cut.Find("#command-session-number").HasAttribute("disabled"));
+        Assert.False(cut.Find("button.session-entry").HasAttribute("disabled"));
         Assert.True(cut.Find("button[data-command='new']").HasAttribute("disabled") is false);
     }
 
@@ -331,19 +332,24 @@ public sealed class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void Home_ValidSelectionLoadsSavedSession()
+    public void Home_SavedRowRestoresSessionWithoutRunningIt()
     {
         BlogWorkspaceService workspace = RegisterWorkspace([
             new BlogSessionSummary(Guid.NewGuid().ToString("N"), "first topic", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
         ]);
         IRenderedComponent<Home> cut = Render<Home>();
         cut.Find("button[data-command='list']").Click();
-        cut.WaitForElement("#command-session-number").Change("1");
+        cut.Find("button.session-entry").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("draft", workspace.State.Draft);
+            Assert.Equal("loaded", workspace.State.InitialPrompt);
+            Assert.Empty(workspace.State.Draft);
+            Assert.Empty(workspace.State.Review);
+            Assert.Null(workspace.State.ActiveSession);
+            Assert.False(cut.Find("#initial-prompt").HasAttribute("disabled"));
             Assert.False(cut.Find("#revision-prompt").HasAttribute("disabled"));
+            Assert.Empty(cut.FindAll("#command-session-number"));
         });
     }
 

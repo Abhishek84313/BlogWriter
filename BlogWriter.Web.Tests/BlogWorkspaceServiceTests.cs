@@ -86,11 +86,12 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
     [Fact]
     public async Task RevisionInput_EnablesWhenListItemIsSelected()
     {
-        var sessions = new StubSessionService { Summaries = [CreateSummary("one")] };
+        BlogSessionSummary summary = CreateSummary("one");
+        var sessions = new StubSessionService { Summaries = [summary] };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         await workspace.ListAsync(discardConfirmed: false);
 
-        await workspace.LaunchSelectionAsync("1");
+        await workspace.RestoreSelectionAsync(summary);
 
         Assert.True(workspace.State.IsRevisionInputEnabled);
     }
@@ -146,7 +147,7 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
 
         Assert.False(workspace.State.IsListing);
         Assert.Equal(WorkspaceMode.List, workspace.State.Mode);
-        Assert.True(workspace.State.IsSelectionInputEnabled);
+        Assert.True(workspace.State.IsSessionSelectionEnabled);
     }
 
     [Fact]
@@ -331,12 +332,16 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LaunchSelectionAsync_RestoresPromptContextAndStartsExactlyOnce()
+    public async Task RestoreSelectionAsync_RestoresPromptContextAndRangeWithoutStarting()
     {
+        BlogSession selected = CreateSession("saved draft", 650, 1250, "saved review");
+        selected.State.MainTask = "saved topic";
+        selected.State.CurrentSubTask = "tighten the ending";
+        BlogSessionSummary summary = CreateSummary("saved");
         var sessions = new StubSessionService
         {
-            Summaries = [CreateSummary("saved")],
-            SessionToLoad = ListLauncherTestHelpers.Session("saved topic", "tighten the ending"),
+            Summaries = [summary],
+            SessionToLoad = selected,
         };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         workspace.State.Draft = "old draft";
@@ -345,30 +350,94 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
         workspace.State.RevisionPrompt = "old revision";
 
         await workspace.ListAsync(true);
-        await workspace.LaunchSelectionAsync("1");
+        await workspace.RestoreSelectionAsync(summary);
 
-        Assert.Equal(1, sessions.StartCalls);
-        Assert.Equal("saved topic", sessions.LastStartPrompt);
+        Assert.Equal(0, sessions.StartCalls);
+        Assert.Equal(0, sessions.RevisionCalls);
+        Assert.Equal("saved topic", workspace.State.InitialPrompt);
         Assert.Equal("tighten the ending", workspace.State.RevisionPrompt);
+        Assert.Equal("650", workspace.State.MinWordsInput);
+        Assert.Equal("1250", workspace.State.MaxWordsInput);
+        Assert.Empty(workspace.State.Draft);
+        Assert.Empty(workspace.State.Review);
+        Assert.Null(workspace.State.ActiveSession);
+        Assert.True(workspace.State.IsInitialPromptEnabled);
+        Assert.True(workspace.State.IsRevisionInputEnabled);
+        Assert.True(workspace.State.IsWordRangeEnabled);
+        Assert.True(workspace.State.IsGoCommandEnabled);
         Assert.Equal(WorkspaceMode.Draft, workspace.State.Mode);
-        Assert.Empty(workspace.State.SelectionError ?? "");
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("0")]
-    [InlineData("9")]
-    public async Task LaunchSelectionAsync_InvalidInputDoesNotLoadOrStart(string input)
+    [Fact]
+    public async Task RestoreSelectionAsync_UsesDefaultRangeWhenSavedRangeIsUnavailable()
+    {
+        BlogSessionSummary summary = CreateSummary("saved");
+        var sessions = new StubSessionService
+        {
+            Summaries = [summary],
+            SessionToLoad = new BlogSession
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OwnerId = "owner",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                State = new ResearchState { MainTask = "legacy topic" },
+            },
+        };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+
+        await workspace.ListAsync(discardConfirmed: true);
+        await workspace.RestoreSelectionAsync(summary);
+
+        Assert.Equal(0, sessions.StartCalls);
+        Assert.Equal(ResearchState.DefaultMinWords.ToString(), workspace.State.MinWordsInput);
+        Assert.Equal(ResearchState.DefaultMaxWords.ToString(), workspace.State.MaxWordsInput);
+    }
+
+    [Fact]
+    public async Task RestoreSelectionAsync_RejectsSummaryOutsideCurrentList()
     {
         var sessions = new StubSessionService { Summaries = [CreateSummary("saved")] };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         await workspace.ListAsync(false);
 
-        await workspace.LaunchSelectionAsync(input);
+        await workspace.RestoreSelectionAsync(CreateSummary("not listed"));
 
         Assert.Equal(0, sessions.LoadCalls);
         Assert.Equal(0, sessions.StartCalls);
-        Assert.NotNull(workspace.State.SelectionError);
+        Assert.NotNull(workspace.State.ValidationMessage);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_AfterRestoreStartsNewSessionWithEditedValues()
+    {
+        BlogSession source = CreateSession("source draft", 650, 1200, "source review");
+        source.State.MainTask = "source topic";
+        source.State.CurrentSubTask = "tighten the ending";
+        BlogSessionSummary summary = new(source.Id, source.State.MainTask, source.CreatedAt, source.UpdatedAt);
+        var sessions = new StubSessionService
+        {
+            Summaries = [summary],
+            SessionToLoad = source,
+        };
+        var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
+        await workspace.ListAsync(discardConfirmed: true);
+        await workspace.RestoreSelectionAsync(summary);
+
+        workspace.State.InitialPrompt = "edited topic";
+        workspace.UpdateMinWords("700");
+        workspace.UpdateMaxWords("1100");
+        await workspace.SubmitAsync();
+
+        Assert.Equal(1, sessions.StartCalls);
+        Assert.Equal(0, sessions.RevisionCalls);
+        Assert.Equal("edited topic", sessions.LastStartPrompt);
+        Assert.Equal(new WordRange(700, 1100), sessions.LastStartRange);
+        Assert.NotNull(workspace.State.ActiveSession);
+        Assert.NotEqual(source.Id, workspace.State.ActiveSession.Id);
+        Assert.Equal("source topic", source.State.MainTask);
+        Assert.Equal("source draft", source.State.Draft);
+        Assert.Equal("source review", source.State.ReviewNotes);
     }
 
     [Fact]
@@ -445,7 +514,7 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadingSessionSeedsReviewerNotesAndClearsTransientLog()
+    public async Task RestoringSessionClearsReviewerNotesAndTransientLog()
     {
         var sessions = new StubSessionService
         {
@@ -455,13 +524,14 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         workspace.State.InitialPrompt = "topic";
         await workspace.SubmitInitialAsync();
+        BlogSessionSummary summary = sessions.Summaries[0];
         await workspace.ListAsync(discardConfirmed: true);
-        workspace.State.SelectionInput = "1";
 
-        await workspace.LoadSelectionAsync();
+        await workspace.RestoreSelectionAsync(summary);
 
-        Assert.Equal("stored review", workspace.State.Review);
+        Assert.Empty(workspace.State.Review);
         Assert.Empty(workspace.State.WorkflowLog);
+        Assert.Null(workspace.State.ActiveSession);
     }
 
     [Fact]
@@ -523,7 +593,7 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
         Assert.Equal(WorkspaceTransitionResult.Completed, await workspace.ListAsync(discardConfirmed: false));
 
         Assert.Equal(WorkspaceMode.List, workspace.State.Mode);
-        Assert.True(workspace.State.IsSelectionVisible);
+        Assert.True(workspace.State.IsSessionSelectionEnabled);
         Assert.False(workspace.State.IsRevisionInputEnabled);
         Assert.Equal(2, workspace.State.DisplayedSessions.Count);
     }
@@ -554,16 +624,15 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadSelectionAsync_RejectsInvalidValueWithoutReplacingStableOutput()
+    public async Task RestoreSelectionAsync_RejectsUnlistedSessionWithoutReplacingStableOutput()
     {
         var sessions = new StubSessionService { Summaries = [CreateSummary("one")] };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         workspace.State.Draft = "stable";
         workspace.State.Review = "stable review";
         await workspace.ListAsync(discardConfirmed: false);
-        workspace.State.SelectionInput = "0";
 
-        await workspace.LoadSelectionAsync();
+        await workspace.RestoreSelectionAsync(CreateSummary("not listed"));
 
         Assert.Equal("stable", workspace.State.Draft);
         Assert.Equal("stable review", workspace.State.Review);
@@ -665,18 +734,18 @@ public sealed class BlogWorkspaceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadSelectionAsync_PopulatesStoredWordRange()
+    public async Task RestoreSelectionAsync_PopulatesStoredWordRange()
     {
+        BlogSessionSummary summary = CreateSummary("one");
         var sessions = new StubSessionService
         {
-            Summaries = [CreateSummary("one")],
+            Summaries = [summary],
             SessionToLoad = CreateSession("loaded", 700, 900),
         };
         var workspace = new BlogWorkspaceService(sessions, TimeSpan.FromMilliseconds(25));
         await workspace.ListAsync(false);
-        workspace.State.SelectionInput = "1";
 
-        await workspace.LoadSelectionAsync();
+        await workspace.RestoreSelectionAsync(summary);
 
         Assert.Equal("700", workspace.State.MinWordsInput);
         Assert.Equal("900", workspace.State.MaxWordsInput);

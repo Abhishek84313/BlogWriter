@@ -135,7 +135,23 @@ button, a { touch-action: manipulation; }
 .review-copy { border-left: 3px solid var(--forest); padding-left: 14px; }
 
 .session-list { display: grid; gap: 0; }
-.session-entry { display: grid; grid-template-columns: 3.2rem 1fr; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+button.session-entry {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 3.2rem 1fr;
+    gap: 8px;
+    padding: 12px 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+button.session-entry:hover:not(:disabled) { background: rgba(30, 90, 70, .07); }
+button.session-entry:disabled { opacity: .65; cursor: wait; }
 .session-number { color: var(--coral); font-weight: 500; }
 .session-entry strong, .session-entry time { display: block; }
 .session-entry time { margin-top: 5px; color: var(--muted); font-size: .7rem; }
@@ -146,7 +162,6 @@ button, a { touch-action: manipulation; }
 .command-trailing { justify-content: flex-end; }
 .list-command { min-width: 0; display: flex; align-items: stretch; gap: 6px; }
 .list-command button { flex: 0 0 72px; }
-.list-command input { width: 3.5rem; min-width: 3.5rem; border: 1px solid var(--ink); padding: 6px 5px; background: var(--surface); color: var(--ink); text-align: center; }
 .command-range { min-width: 0; display: grid; place-items: center; }
 .help-command { padding-inline: 0 !important; }
 .command-bar button, .dialog-actions button, .command-button {
@@ -205,7 +220,6 @@ button, a { touch-action: manipulation; }
     .command-bar { width: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .list-command { gap: 4px; }
     .list-command button { flex-basis: auto; min-width: 0; }
-    .list-command input { width: 3rem; min-width: 3rem; padding-inline: 2px; }
     .workflow-log { max-height: 4.8rem; }
     .session-selector { width: 100%; }
 }

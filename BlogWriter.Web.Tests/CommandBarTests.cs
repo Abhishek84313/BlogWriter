@@ -8,28 +8,13 @@ public sealed class CommandBarTests : BunitContext
     public CommandBarTests() => JSInterop.Mode = JSRuntimeMode.Loose;
 
     [Fact]
-    public void CommandBar_ShowsInlineThreeDigitSelectorAndHelp()
+    public void CommandBar_ShowsCommandsWithoutNumericSessionSelector()
     {
-        IRenderedComponent<CommandBar> cut = Render<CommandBar>(parameters => parameters
-            .Add(component => component.SelectionVisible, true)
-            .Add(component => component.SelectionInput, "12"));
+        IRenderedComponent<CommandBar> cut = Render<CommandBar>();
 
-        Assert.Equal("12", cut.Find("#command-session-number").GetAttribute("value"));
-        Assert.Equal("3", cut.Find("#command-session-number").GetAttribute("maxlength"));
+        Assert.Empty(cut.FindAll("#command-session-number"));
+        Assert.NotNull(cut.Find("button[data-command='list']"));
+        Assert.NotNull(cut.Find("button[data-command='go']"));
         Assert.Equal("Help", cut.Find("button[data-command='help']").GetAttribute("aria-label"));
-        Assert.DoesNotContain("session-selector", cut.Markup);
-    }
-
-    [Fact]
-    public void CommandBar_SelectionChangeInvokesCallback()
-    {
-        string? value = null;
-        IRenderedComponent<CommandBar> cut = Render<CommandBar>(parameters => parameters
-            .Add(component => component.SelectionVisible, true)
-            .Add(component => component.SelectionChanged, (string selected) => value = selected));
-
-        cut.Find("#command-session-number").Change("2");
-
-        Assert.Equal("2", value);
     }
 }

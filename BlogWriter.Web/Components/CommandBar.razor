@@ -3,24 +3,6 @@
         <button type="button" data-command="new" disabled="@(!NewEnabled)" @onclick="New">New</button>
         <div class="list-command">
             <button type="button" data-command="list" disabled="@(!ListEnabled)" @onclick="List">List</button>
-            @if (SelectionVisible)
-            {
-                <label class="sr-only" for="command-session-number">Saved session number</label>
-                <input id="command-session-number"
-                       data-command="session-number"
-                       inputmode="numeric"
-                       maxlength="3"
-                       pattern="[0-9]*"
-                       value="@SelectionInput"
-                       disabled="@(!SelectionEnabled)"
-                       aria-invalid="@(!string.IsNullOrWhiteSpace(SelectionError))"
-                       aria-describedby="command-session-error"
-                       @onchange="HandleSelectionChanged" />
-                @if (!string.IsNullOrWhiteSpace(SelectionError))
-                {
-                    <span id="command-session-error" class="sr-only">@SelectionError</span>
-                }
-            }
         </div>
     </div>
     <div class="command-range">
@@ -42,21 +24,6 @@
 
     [Parameter]
     public EventCallback List { get; set; }
-
-    [Parameter]
-    public EventCallback<string> SelectionChanged { get; set; }
-
-    [Parameter]
-    public bool SelectionVisible { get; set; }
-
-    [Parameter]
-    public bool SelectionEnabled { get; set; } = true;
-
-    [Parameter]
-    public string SelectionInput { get; set; } = "";
-
-    [Parameter]
-    public string? SelectionError { get; set; }
 
     [Parameter]
     public bool NewEnabled { get; set; } = true;
@@ -82,6 +49,4 @@
     [Parameter]
     public EventCallback Go { get; set; }
 
-    private Task HandleSelectionChanged(ChangeEventArgs args) =>
-        SelectionChanged.InvokeAsync(args.Value?.ToString() ?? "");
 }

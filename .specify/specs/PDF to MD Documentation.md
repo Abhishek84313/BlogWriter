@@ -8,6 +8,8 @@ Source:
 	converterVersion: "0.1.8"
 ---
 
+# PDF to Markdown Documentation
+
 This document was a pdf. It should now be a md file in .specify/specs. Assuming that
 worked, additional documentation can be placed here by using marktitdown.
 
@@ -22,4 +24,3 @@ This was written in red bold
 This was highlighted.
 
 This was wriTTen in algerian fonT
-

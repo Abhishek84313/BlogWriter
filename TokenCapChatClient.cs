@@ -12,6 +12,8 @@ namespace BlogWriter;
 /// </summary>
 public sealed class TokenCapChatClient : DelegatingChatClient
 {
+    public const int DefaultMaxOutputTokens = 8192;
+
     // Key used by the OpenAI connector to report reasoning tokens inside
     // UsageDetails.AdditionalCounts (there is no dedicated top-level property).
     private const string ReasoningTokenCountKey = "OutputTokenDetails.ReasoningTokenCount";
@@ -30,10 +32,21 @@ public sealed class TokenCapChatClient : DelegatingChatClient
     /// Creates a MAF chat-client middleware factory whose clients share one
     /// cumulative process-wide token budget.
     /// </summary>
-    public static Func<IChatClient, IChatClient> CreateSharedFactory(long maxTotalTokens)
+    public static Func<IChatClient, IChatClient> CreateSharedFactory(
+        long maxTotalTokens,
+        int maxOutputTokens = DefaultMaxOutputTokens)
     {
+        if (maxOutputTokens <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxOutputTokens), maxOutputTokens, "Output token cap must be positive.");
+        }
+
         var budget = new TokenBudget(maxTotalTokens);
-        return innerClient => new TokenCapChatClient(innerClient, budget);
+        return innerClient => new TokenCapChatClient(
+            innerClient.AsBuilder()
+                .ConfigureOptions(options => options.MaxOutputTokens ??= maxOutputTokens)
+                .Build(),
+            budget);
     }
 
     /// <summary>Cumulative token usage observed across every model round-trip so far.</summary>

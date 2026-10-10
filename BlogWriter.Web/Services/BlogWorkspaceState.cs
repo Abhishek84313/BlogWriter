@@ -43,9 +43,10 @@ public sealed class BlogWorkspaceState
     public string Review { get; set; } = "";
     public BlogSession? ActiveSession { get; internal set; }
     public IReadOnlyList<BlogSessionSummary> DisplayedSessions { get; internal set; } = [];
-    public string SelectionInput { get; set; } = "";
-    public string? SelectionError { get; internal set; }
     public bool IsProcessing { get; internal set; }
+    public bool IsListing { get; internal set; }
+    public bool IsSelecting { get; internal set; }
+    internal bool IsRestoredPending { get; set; }
     public string? StatusMessage { get; internal set; }
     public string? ValidationMessage { get; internal set; }
     public IReadOnlyList<WorkflowLogEntry> WorkflowLog { get; internal set; } = [];
@@ -90,21 +91,37 @@ public sealed class BlogWorkspaceState
             : $"{Review}\n\n{message}";
     }
 
-    public bool IsSelectionVisible => Mode == WorkspaceMode.List;
+    public bool IsSessionSelectionEnabled => Mode == WorkspaceMode.List && !IsBusy;
     public bool HasDraft => !string.IsNullOrWhiteSpace(Draft);
+    public bool IsWordRangeEnabled => !IsBusy && (Mode is WorkspaceMode.New or WorkspaceMode.Draft);
+
+    public bool IsNewCommandEnabled => !IsProcessing && !IsSelecting && Mode != WorkspaceMode.Ended;
+    public bool IsListCommandEnabled => !IsBusy && (Mode is WorkspaceMode.New or WorkspaceMode.Draft);
+    public bool IsGoCommandEnabled => !IsBusy && (Mode is WorkspaceMode.New or WorkspaceMode.Draft);
+    public bool IsQuitCommandEnabled => !IsBusy && (Mode is WorkspaceMode.New or WorkspaceMode.Draft);
+    public bool IsHelpCommandEnabled => !IsBusy && (Mode is WorkspaceMode.New or WorkspaceMode.Draft);
 
     /// <summary>
-    /// Latched once the draft window has text or a saved session is selected, and
-    /// cleared only by New. The revision field stays usable across later drafts.
+    /// Latched once a draft exists. A restored saved session remains an initial
+    /// prompt until its first new run completes.
     /// </summary>
     public bool IsRevisionRequested { get; internal set; }
 
-    public bool IsRevisionInputEnabled => !IsProcessing && IsRevisionRequested;
+    public bool IsRevisionInputEnabled =>
+        !IsBusy &&
+        Mode != WorkspaceMode.List &&
+        Mode != WorkspaceMode.Ended &&
+        !string.IsNullOrWhiteSpace(InitialPrompt);
 
     /// <summary>
     /// The writing prompt is locked while revising; New unlocks it again.
     /// </summary>
-    public bool IsInitialPromptEnabled => !IsProcessing && !IsRevisionRequested;
+    public bool IsInitialPromptEnabled =>
+        !IsBusy &&
+        !IsRevisionRequested &&
+        (Mode == WorkspaceMode.New || IsRestoredPending);
+
+    private bool IsBusy => IsProcessing || IsListing || IsSelecting;
 
     /// <summary>
     /// Min and Max are locked after Go until the draft is populated (or the operation ends).

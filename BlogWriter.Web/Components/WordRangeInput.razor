@@ -8,6 +8,7 @@
                inputmode="numeric"
                pattern="[0-9]*"
                value="@MinValue"
+               disabled="@Disabled"
                @oninput="args => MinValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"
                disabled="@Disabled"
                aria-invalid="@(MinError is null ? "false" : "true")"
@@ -28,6 +29,7 @@
                inputmode="numeric"
                pattern="[0-9]*"
                value="@MaxValue"
+               disabled="@Disabled"
                @oninput="args => MaxValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"
                disabled="@Disabled"
                aria-invalid="@(MaxError is null ? "false" : "true")"
@@ -39,10 +41,12 @@
         }
     </div>
 
-    <button type="button" class="range-go" data-command="go" @onclick="Go">Go</button>
 </section>
 
 @code {
+    [Parameter]
+    public bool Disabled { get; set; }
+
     [Parameter]
     public string MinValue { get; set; } = ResearchState.DefaultMinWords.ToString();
 
@@ -61,9 +65,4 @@
     [Parameter]
     public string? MaxError { get; set; }
 
-    [Parameter]
-    public bool Disabled { get; set; }
-
-    [Parameter]
-    public EventCallback Go { get; set; }
 }

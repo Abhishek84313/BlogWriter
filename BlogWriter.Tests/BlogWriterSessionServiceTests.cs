@@ -29,6 +29,28 @@ public sealed class BlogWriterSessionServiceTests
     }
 
     [Fact]
+    public async Task StartAsync_CreatesDistinctHistoryEntryFromRestoredSource()
+    {
+        var store = new RecordingStore();
+        BlogSession source = CreateSession("source draft", "source review");
+        source.State.MainTask = "source topic";
+        store.Session = source;
+        var service = new BlogWriterSessionService(
+            new StubWorkflow(state => state),
+            store);
+
+        BlogSession created = await service.StartAsync("edited topic", 700, 1100);
+
+        Assert.NotEqual(source.Id, created.Id);
+        Assert.Same(created, store.Session);
+        Assert.Equal(1, store.CreateCalls);
+        Assert.Equal(1, store.SaveCalls);
+        Assert.Equal("source topic", source.State.MainTask);
+        Assert.Equal("source draft", source.State.Draft);
+        Assert.Equal("source review", source.State.ReviewNotes);
+    }
+
+    [Fact]
     public async Task ReviseAsync_DoesNotMutateStableSessionWhenWorkflowFails()
     {
         var store = new RecordingStore();

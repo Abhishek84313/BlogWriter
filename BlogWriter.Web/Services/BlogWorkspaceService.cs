@@ -25,6 +25,11 @@ public sealed class BlogWorkspaceService : IDisposable
 
     public Task SubmitAsync()
     {
+        if (State.IsRestoredPending)
+        {
+            return SubmitInitialAsync();
+        }
+
         // While revising, the writing prompt is locked, so only the revision can be submitted.
         if (State.IsRevisionRequested)
         {
@@ -119,20 +124,27 @@ public sealed class BlogWorkspaceService : IDisposable
         }
 
         await CancelActiveOperationAsync();
+        long listVersion = ++_operationVersion;
         RestoreAcceptedRange();
         State.InitialPrompt = "";
         State.RevisionPrompt = "";
         State.MarkPromptsSubmitted();
-        State.SelectionInput = "";
-        State.SelectionError = null;
+        State.IsRestoredPending = false;
         State.ValidationMessage = null;
+        State.IsListing = true;
         State.StatusMessage = "Loading saved sessions...";
         State.AppendLog(State.StatusMessage, WorkflowOutputOutcome.Progress);
         NotifyChanged();
 
         try
         {
-            State.DisplayedSessions = (await _sessions.ListAsync()).Take(20).ToList();
+            IReadOnlyList<BlogSessionSummary> summaries = await _sessions.ListAsync();
+            if (listVersion != _operationVersion)
+            {
+                return WorkspaceTransitionResult.Completed;
+            }
+
+            State.DisplayedSessions = summaries.Take(20).ToList();
             State.Mode = WorkspaceMode.List;
             State.StatusMessage = State.DisplayedSessions.Count == 0
                 ? "No saved sessions are available."
@@ -141,88 +153,80 @@ public sealed class BlogWorkspaceService : IDisposable
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (listVersion != _operationVersion)
+            {
+                return WorkspaceTransitionResult.Completed;
+            }
+
             State.DisplayedSessions = [];
             State.Mode = WorkspaceMode.Draft;
             State.ValidationMessage = "Unable to load saved sessions. Try again.";
             State.StatusMessage = null;
+        }
+        finally
+        {
+            if (listVersion == _operationVersion)
+            {
+                State.IsListing = false;
+            }
         }
 
         NotifyChanged();
         return WorkspaceTransitionResult.Completed;
     }
 
-    public async Task LoadSelectionAsync()
+    public async Task RestoreSelectionAsync(BlogSessionSummary summary)
     {
-        if (!SessionListSelection.TryResolve(State.SelectionInput, State.DisplayedSessions, out BlogSessionSummary? summary))
+        ArgumentNullException.ThrowIfNull(summary);
+
+        if (!State.IsSessionSelectionEnabled)
         {
-            SetValidation("Enter a number from the current saved-session list.");
             return;
         }
 
+        if (!State.DisplayedSessions.Any(displayed => displayed.Id == summary.Id))
+        {
+            SetValidation("Select a session from the current saved-session list.");
+            return;
+        }
+
+        State.IsSelecting = true;
         State.ValidationMessage = null;
+        NotifyChanged();
         try
         {
-            BlogSession? session = await _sessions.LoadAsync(summary!.Id);
+            BlogSession? session = await _sessions.LoadAsync(summary.Id);
             if (session is null)
             {
                 SetValidation("That saved session is no longer available. Refresh the list and try again.");
                 return;
             }
 
-            Publish(session);
+            State.Draft = "";
+            State.Review = "";
+            State.ClearOutput();
+            State.CurrentStatus = null;
+            State.CurrentStatusOutcome = null;
+            State.InitialPrompt = session.State.MainTask;
+            State.RevisionPrompt = session.State.CurrentSubTask;
+            State.IsRevisionRequested = false;
+            State.IsRestoredPending = true;
+            State.ActiveSession = null;
+            State.DisplayedSessions = [];
+            State.Mode = WorkspaceMode.Draft;
+            State.StatusMessage = null;
+            State.ValidationMessage = null;
+            SetAcceptedAndVisibleRange(GetSessionRange(session));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             SetValidation("Unable to load the selected session. Try again.");
         }
-    }
-
-    public async Task LaunchSelectionAsync(string input)
-    {
-        State.SelectionInput = input;
-        State.SelectionError = null;
-
-        if (State.IsProcessing)
+        finally
         {
-            SetSelectionError("Wait for the current writing operation to finish.");
-            return;
+            State.IsSelecting = false;
+            NotifyChanged();
         }
-
-        if (!SessionListSelection.TryResolve(input, State.DisplayedSessions, out BlogSessionSummary? summary))
-        {
-            SetSelectionError("Enter a valid number from the current saved-session list.");
-            return;
-        }
-
-        BlogSession? session;
-        try
-        {
-            session = await _sessions.LoadAsync(summary!.Id);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            SetSelectionError("Unable to load the selected session. Try again.");
-            return;
-        }
-
-        if (session is null)
-        {
-            SetSelectionError("That saved session is no longer available. Refresh the list and try again.");
-            return;
-        }
-
-        State.Draft = "";
-        State.Review = "";
-        State.ReviewerUpdateKeys.Clear();
-        State.InitialPrompt = session.State.MainTask;
-        State.RevisionPrompt = session.State.CurrentSubTask;
-        State.IsRevisionRequested = true;
-        State.ActiveSession = null;
-        State.SelectionError = null;
-        State.ValidationMessage = null;
-        NotifyChanged();
-
-        await SubmitInitialAsync();
     }
 
     public async Task<WorkspaceTransitionResult> QuitAsync(bool discardConfirmed)
@@ -402,6 +406,7 @@ public sealed class BlogWorkspaceService : IDisposable
         }
 
         State.ActiveSession = session;
+        State.IsRestoredPending = false;
         State.Draft = session.State.Draft;
         if (submittedRange is null)
         {
@@ -419,8 +424,6 @@ public sealed class BlogWorkspaceService : IDisposable
             State.AppendReviewerFeedback(session.State.ReviewNotes, $"final-{session.Id}-{_operationVersion}");
         }
         State.DisplayedSessions = [];
-        State.SelectionInput = "";
-        State.SelectionError = null;
         State.Mode = WorkspaceMode.Draft;
         State.ValidationMessage = null;
         NotifyChanged();
@@ -439,8 +442,9 @@ public sealed class BlogWorkspaceService : IDisposable
         State.ClearOutput();
         State.ActiveSession = null;
         State.DisplayedSessions = [];
-        State.SelectionInput = "";
-        State.SelectionError = null;
+        State.IsSelecting = false;
+        State.IsRestoredPending = false;
+        State.IsListing = false;
         State.IsProcessing = false;
         State.StatusMessage = null;
         State.ValidationMessage = null;
@@ -451,14 +455,6 @@ public sealed class BlogWorkspaceService : IDisposable
 
     private void SetValidation(string message)
     {
-        State.ValidationMessage = message;
-        State.AppendLog(message, WorkflowOutputOutcome.Validation);
-        NotifyChanged();
-    }
-
-    private void SetSelectionError(string message)
-    {
-        State.SelectionError = message;
         State.ValidationMessage = message;
         State.AppendLog(message, WorkflowOutputOutcome.Validation);
         NotifyChanged();

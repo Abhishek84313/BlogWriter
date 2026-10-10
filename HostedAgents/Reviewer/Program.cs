@@ -15,7 +15,7 @@ var projectEndpoint = new Uri(
 string modelDeployment = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-5-mini";
 
 // Entra ID only — no API keys, per repository constraint.
-AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
+AIAgent agent = new AIProjectClient(projectEndpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned))
     .AsAIAgent(
         model: modelDeployment,
         instructions: PromptCatalog.ReviewerInstructions,

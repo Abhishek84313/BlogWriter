@@ -12,14 +12,13 @@
             <p class="eyebrow">Editorial workspace</p>
             <h1>Write. Review. Refine.</h1>
         </div>
-        <p class="workspace-summary">A focused desk for shaping researched drafts with your reviewer.</p>
+        <p class="workspace-summary">A researcher and author for blog pages.</p>
     </header>
 
     @if (Workspace.State.Mode == WorkspaceMode.Ended)
     {
         <section class="ended-state" aria-labelledby="ended-heading">
-            <p class="eyebrow">Session closed</p>
-            <h2 id="ended-heading">Your workspace has ended.</h2>
+            <p class="eyebrow">Session closed</p>            
             <p>Refresh the page when you are ready to begin another session.</p>
         </section>
     }
@@ -28,7 +27,7 @@
         <section class="prompt-strip" aria-label="Writing prompts">
             <PromptInput @ref="_initialPrompt"
                          Id="initial-prompt"
-                         Label="New writing prompt"
+                         Label="New query"
                          Value="@Workspace.State.InitialPrompt"
                          ValueChanged="value => Workspace.State.InitialPrompt = value"
                          Disabled="@(!Workspace.State.IsInitialPromptEnabled)" />
@@ -38,15 +37,6 @@
                          ValueChanged="value => Workspace.State.RevisionPrompt = value"
                          Disabled="@(!Workspace.State.IsRevisionInputEnabled)" />
         </section>
-
-        <WordRangeInput MinValue="@Workspace.State.MinWordsInput"
-                MinValueChanged="Workspace.UpdateMinWords"
-                MaxValue="@Workspace.State.MaxWordsInput"
-                MaxValueChanged="Workspace.UpdateMaxWords"
-                MinError="@Workspace.State.MinWordsError"
-                MaxError="@Workspace.State.MaxWordsError"
-                Disabled="@(!Workspace.State.IsWordRangeEnabled)"
-                Go="Workspace.SubmitAsync" />
 
         <section class="work-grid">
             @if (Workspace.State.Mode == WorkspaceMode.List)
@@ -58,7 +48,9 @@
                     }
                     else
                     {
-                        <SessionList Sessions="@Workspace.State.DisplayedSessions" />
+                        <SessionList Sessions="@Workspace.State.DisplayedSessions"
+                                     SelectionEnabled="@Workspace.State.IsSessionSelectionEnabled"
+                                     Selected="Workspace.RestoreSelectionAsync" />
                     }
                 </DraftPane>
             }
@@ -72,12 +64,24 @@
         <footer class="workspace-footer">
             <CommandBar New="() => RequestTransitionAsync(PendingAction.New)"
                         List="() => RequestTransitionAsync(PendingAction.List)"
-                        SelectionChanged="Workspace.LaunchSelectionAsync"
-                        SelectionVisible="@Workspace.State.IsSelectionVisible"
-                        SelectionInput="@Workspace.State.SelectionInput"
-                        SelectionError="@Workspace.State.SelectionError"
+                        NewEnabled="@Workspace.State.IsNewCommandEnabled"
+                        ListEnabled="@Workspace.State.IsListCommandEnabled"
+                        GoEnabled="@Workspace.State.IsGoCommandEnabled"
+                        QuitEnabled="@Workspace.State.IsQuitCommandEnabled"
+                        HelpEnabled="@Workspace.State.IsHelpCommandEnabled"
+                        Go="Workspace.SubmitAsync"
                         Quit="() => RequestTransitionAsync(PendingAction.Quit)"
-                        Help="ShowHelp" />
+                        Help="ShowHelp">
+                <ChildContent>
+                    <WordRangeInput Disabled="@(!Workspace.State.IsWordRangeEnabled)"
+                                    MinValue="@Workspace.State.MinWordsInput"
+                                    MinValueChanged="Workspace.UpdateMinWords"
+                                    MaxValue="@Workspace.State.MaxWordsInput"
+                                    MaxValueChanged="Workspace.UpdateMaxWords"
+                                    MinError="@Workspace.State.MinWordsError"
+                                    MaxError="@Workspace.State.MaxWordsError" />
+                </ChildContent>
+            </CommandBar>
 
             <WorkflowLog CurrentStatus="@Workspace.State.CurrentStatus"
                          CurrentStatusOutcome="@Workspace.State.CurrentStatusOutcome" />

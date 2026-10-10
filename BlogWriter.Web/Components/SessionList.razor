@@ -1,17 +1,27 @@
 <div class="session-list" aria-label="Saved writing sessions">
     @foreach ((BlogSessionSummary session, int index) in Sessions.Select((session, index) => (session, index)))
     {
-        <article class="session-entry">
+        <button type="button"
+                class="session-entry"
+                aria-label="Restore saved session @(index + 1): @session.MainTask"
+                disabled="@(!SelectionEnabled)"
+                @onclick="() => Selected.InvokeAsync(session)">
             <span class="session-number">[@(index + 1)]</span>
             <div>
                 <strong>@session.MainTask</strong>
                 <time datetime="@session.UpdatedAt.ToString("O")">Updated @session.UpdatedAt.ToString("u")</time>
             </div>
-        </article>
+        </button>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired]
     public IReadOnlyList<BlogSessionSummary> Sessions { get; set; } = [];
+
+    [Parameter]
+    public bool SelectionEnabled { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<BlogSessionSummary> Selected { get; set; }
 }

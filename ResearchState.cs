@@ -3,7 +3,7 @@ namespace BlogWriter;
 /// <summary>State for the research workflow.</summary>
 public class ResearchState
 {
-    /// <summary>Hard upper bound on author/review revision cycles. Guarantees the workflow terminates.</summary>
+    /// <summary>Hard upper bound on author passes: the initial draft plus one revision. Guarantees the workflow terminates.</summary>
     public const int MaxRevisions = 2;
 
     /// <summary>The single source-of-truth marker written to <see cref="ReviewNotes"/> on approval.</summary>

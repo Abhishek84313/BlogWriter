@@ -8,11 +8,13 @@ public sealed class BlogWorkflowTests
     [Fact]
     public async Task RunAsync_EmitsLifecycleAndReviewerUpdatesWithoutChangingFinalState()
     {
+        var author = new TestAuthor("draft");
+        var reviewer = new TestReviewer("APPROVED");
         var workflow = new BlogWorkflow(
             new TestBlogger(),
             new TestResearcher(),
-            new TestAuthor(),
-            new TestReviewer(),
+            author,
+            reviewer,
             NullLogger<BlogWorkflow>.Instance);
         var output = new WorkflowOutputCollector();
 
@@ -32,6 +34,60 @@ public sealed class BlogWorkflowTests
             update.Kind == WorkflowOutputKind.Lifecycle &&
             update.Outcome == WorkflowOutputOutcome.Success);
         Assert.Equal(output.Updates.Count, output.Updates.Select(update => update.Sequence).Distinct().Count());
+        Assert.Equal(1, author.Calls);
+        Assert.Equal(1, reviewer.Calls);
+    }
+
+    [Fact]
+    public async Task RunAsync_RejectedInitialDraftGetsOneRevisionAndNoSecondReview()
+    {
+        var author = new TestAuthor("draft-1", "draft-2");
+        var reviewer = new TestReviewer("Please revise the introduction.");
+        var workflow = new BlogWorkflow(
+            new TestBlogger(),
+            new TestResearcher(),
+            author,
+            reviewer,
+            NullLogger<BlogWorkflow>.Instance);
+        var output = new WorkflowOutputCollector();
+
+        var service = new BlogWriterSessionService(workflow, new RecordingStore());
+        BlogSession session = await service.StartAsync("topic", output: output);
+
+        Assert.Equal("draft-2", session.State.Draft);
+        Assert.Equal("Please revise the introduction.", session.State.ReviewNotes);
+        Assert.Equal(2, author.Calls);
+        Assert.Equal(2, author.ReviewNotesSeen.Count);
+        Assert.Equal("", author.ReviewNotesSeen[0]);
+        Assert.Equal("Please revise the introduction.", author.ReviewNotesSeen[1]);
+        Assert.Equal(1, reviewer.Calls);
+        Assert.Contains(output.Updates, update =>
+            update.Kind == WorkflowOutputKind.Lifecycle &&
+            update.Outcome == WorkflowOutputOutcome.Success);
+    }
+
+    [Fact]
+    public async Task RunAsync_RejectedRevisionWithoutReplacementKeepsLatestDraftAndNoSecondReview()
+    {
+        var author = new TestAuthor("draft-1", null);
+        var reviewer = new TestReviewer("Please revise the introduction.");
+        var workflow = new BlogWorkflow(
+            new TestBlogger(),
+            new TestResearcher(),
+            author,
+            reviewer,
+            NullLogger<BlogWorkflow>.Instance);
+        var output = new WorkflowOutputCollector();
+
+        var service = new BlogWriterSessionService(workflow, new RecordingStore());
+        BlogSession session = await service.StartAsync("topic", output: output);
+
+        Assert.Equal("draft-1", session.State.Draft);
+        Assert.Equal(2, author.Calls);
+        Assert.Equal(1, reviewer.Calls);
+        Assert.Contains(output.Updates, update =>
+            update.Kind == WorkflowOutputKind.Lifecycle &&
+            update.Outcome == WorkflowOutputOutcome.Success);
     }
 
     private sealed class TestBlogger : IBloggerAgent
@@ -59,26 +115,42 @@ public sealed class BlogWorkflowTests
         }
     }
 
-    private sealed class TestAuthor : IAuthorAgent
+    private sealed class TestAuthor(params string?[] drafts) : IAuthorAgent
     {
+        private readonly IReadOnlyList<string?> _drafts = drafts;
+
+        public int Calls { get; private set; }
+        public List<string> ReviewNotesSeen { get; } = [];
+
         public Task<string?> InvokeAsync(ResearchState state, CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>("draft");
+            Task.FromResult(_drafts[Math.Min(Calls, _drafts.Count - 1)]);
 
         public Task<ResearchState> AuthorNodeAsync(ResearchState state, CancellationToken cancellationToken = default)
         {
-            state.Draft = "draft";
+            string? draft = _drafts[Math.Min(Calls, _drafts.Count - 1)];
+            ReviewNotesSeen.Add(state.ReviewNotes);
+            Calls++;
+            state.RevisionNumber++;
+            if (!string.IsNullOrEmpty(draft))
+            {
+                state.Draft = draft;
+            }
+
             return Task.FromResult(state);
         }
     }
 
-    private sealed class TestReviewer : IReviewerAgent
+    private sealed class TestReviewer(string reviewNotes) : IReviewerAgent
     {
+        public int Calls { get; private set; }
+
         public Task<string> InvokeAsync(ResearchState state, CancellationToken cancellationToken = default) =>
-            Task.FromResult("APPROVED");
+            Task.FromResult(reviewNotes);
 
         public Task<ResearchState> ReviewerNodeAsync(ResearchState state, CancellationToken cancellationToken = default)
         {
-            state.ReviewNotes = "APPROVED";
+            Calls++;
+            state.ReviewNotes = reviewNotes;
             return Task.FromResult(state);
         }
     }
